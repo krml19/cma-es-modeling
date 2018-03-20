@@ -1,8 +1,5 @@
-import numpy as np
 from scripts.benchmarks.BenchmarkModel import BenchmarkModel
 from scripts.model.constraint import Operator, Constraint, Constraints
-from scripts import sampler
-import pandas as pd
 
 
 class Cube(BenchmarkModel):
@@ -20,10 +17,8 @@ class Cube(BenchmarkModel):
         self.bounds = [self.bounds(i=ii, d=d) for ii in self.variables]
 
     def generate_points_from_range(self):
-        cols = self.variable_names(self.variables)
-        samples = sampler.samples(self.bounds, rows=BenchmarkModel.rows, cols=len(self.variables))
-        df = pd.DataFrame(samples.T, columns=cols)
-        self.draw2d(df=df, cols=cols, selected=[1, 0])
+        df = self.generate_df()
+        self.draw2d(df=df, selected=[1, 0])
         self.info(df=df)
 
     def matches_constraints(self, row):
