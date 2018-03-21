@@ -20,9 +20,12 @@ class BenchmarkModel:
     def bounds(self, i, d):
         pass
 
+    def generate_valid_column(self, df):
+        return df.apply(self.matches_constraints, axis=1)
+
     def draw2d(self, df, selected=[0, 1]):
         cols = df.columns
-        df['valid'] = df.apply(self.matches_constraints, axis=1)
+        df['valid'] = self.generate_valid_column(df)
         color = np.where(df['valid'].values == True, 'g', 'r')
         df.plot(kind='scatter', x=cols[selected[0]], y=cols[selected[1]], c=color)
         plt.show()

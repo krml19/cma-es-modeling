@@ -15,7 +15,7 @@ class Ball(BenchmarkModel):
         self.bounds = [self.bounds(i=ii, d=d) for ii in self.variables]
 
     def matches_constraints(self, row):
-        _sum = sum([(x-i)**2 for i, x in enumerate(row)])
+        _sum = sum([(x-(i+1))**2 for i, x in enumerate(row)])
         return self.constraint.validate(_sum)
 
     def generate_points_from_range(self):

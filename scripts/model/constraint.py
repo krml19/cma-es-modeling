@@ -1,6 +1,6 @@
 from enum import Enum
 import operator
-from functools import reduce
+
 
 class Operator(Enum):
     le = operator.le
