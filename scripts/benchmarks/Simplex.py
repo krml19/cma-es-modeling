@@ -1,7 +1,7 @@
 from scripts.benchmarks.BenchmarkModel import BenchmarkModel
 from scripts.model.constraint import Operator, Constraint, Constraints
 import numpy as np
-
+from scripts.drawer import draw
 
 class Simplex(BenchmarkModel):
 
@@ -19,7 +19,8 @@ class Simplex(BenchmarkModel):
 
     def generate_points_from_range(self):
         df = self.generate_df()
-        self.draw2d(df=df, selected=[1, 0])
+        draw.draw2d(df=df, selected=[1, 0])
+        draw.draw3d(df=df, selected=[0, 1, 2])
         self.info(df=df)
 
     def matches_constraints(self, row):

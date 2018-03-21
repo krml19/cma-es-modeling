@@ -5,7 +5,7 @@ import pandas as pd
 
 
 class BenchmarkModel:
-    rows = 10000
+    rows = 1000
 
     def __init__(self, i, d=2.7):
         self.variables = np.arange(1, i + 1)
@@ -23,13 +23,6 @@ class BenchmarkModel:
     def generate_valid_column(self, df):
         return df.apply(self.matches_constraints, axis=1)
 
-    def draw2d(self, df, selected=[0, 1]):
-        cols = df.columns
-        df['valid'] = self.generate_valid_column(df)
-        color = np.where(df['valid'].values == True, 'g', 'r')
-        df.plot(kind='scatter', x=cols[selected[0]], y=cols[selected[1]], c=color)
-        plt.show()
-
     def info(self, df):
         print(df.describe())
         print(df)
@@ -37,4 +30,6 @@ class BenchmarkModel:
     def generate_df(self):
         cols = self.variable_names(self.variables)
         samples = sampler.samples(self.bounds, rows=BenchmarkModel.rows, cols=len(self.variables))
-        return pd.DataFrame(samples.T, columns=cols)
+        df = pd.DataFrame(samples.T, columns=cols)
+        df['valid'] = self.generate_valid_column(df)
+        return df

@@ -1,6 +1,6 @@
 from scripts.benchmarks.BenchmarkModel import BenchmarkModel
 from scripts.model.constraint import Operator, Constraint, Constraints
-
+from scripts.drawer import draw
 
 class Cube(BenchmarkModel):
 
@@ -18,7 +18,9 @@ class Cube(BenchmarkModel):
 
     def generate_points_from_range(self):
         df = self.generate_df()
-        self.draw2d(df=df, selected=[1, 0])
+        draw.draw2d(df=df, selected=[1, 0])
+        draw.draw3d(df=df, selected=[0, 1, 2])
+
         self.info(df=df)
 
     def matches_constraints(self, row):
@@ -28,7 +30,7 @@ class Cube(BenchmarkModel):
         return True
 
 
-cube = Cube(i=2, d=2.7)
+cube = Cube(i=3, d=2.7)
 cube.generate_points_from_range()
 
 

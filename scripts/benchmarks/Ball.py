@@ -1,6 +1,6 @@
 from scripts.benchmarks.BenchmarkModel import BenchmarkModel
 from scripts.model.constraint import Operator, Constraint, Constraints
-
+from scripts.drawer import draw
 
 class Ball(BenchmarkModel):
 
@@ -20,7 +20,8 @@ class Ball(BenchmarkModel):
 
     def generate_points_from_range(self):
         df = self.generate_df()
-        self.draw2d(df=df, selected=[1, 0])
+        draw.draw2d(df=df, selected=[1, 0])
+        draw.draw3d(df=df, selected=[0, 1, 2])
         self.info(df=df)
 
 
