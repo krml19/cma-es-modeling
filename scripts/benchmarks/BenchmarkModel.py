@@ -5,7 +5,7 @@ import pandas as pd
 
 
 class BenchmarkModel:
-    rows = 1000
+    rows = 100000
 
     def __init__(self, i, d=2.7):
         self.variables = np.arange(1, i + 1)
@@ -27,9 +27,11 @@ class BenchmarkModel:
         print(df.describe())
         print(df)
 
-    def generate_df(self):
+    def generate_df(self, take_only_valid_points=True):
         cols = self.variable_names(self.variables)
         samples = sampler.samples(self.bounds, rows=BenchmarkModel.rows, cols=len(self.variables))
         df = pd.DataFrame(samples.T, columns=cols)
         df['valid'] = self.generate_valid_column(df)
+        if take_only_valid_points:
+            df = df[df.valid == True]
         return df

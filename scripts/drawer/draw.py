@@ -14,9 +14,10 @@ def draw3d(df, selected=[0, 1, 2]):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    for x, y, z, c in zip(df[df.columns[selected[0]]].values, df[df.columns[selected[1]]].values, df[df.columns[selected[2]]].values, df['valid'].values):
-        c = 'g' if c == True else 'r'
-        ax.scatter(x, y, z, c=c)
+    for x, y, z, v in zip(df[df.columns[selected[0]]].values, df[df.columns[selected[1]]].values, df[df.columns[selected[2]]].values, df['valid'].values):
+        s = 1 if v == True else 0.5
+        c = 'g' if v == True else 'r'
+        ax.scatter(x, y, z, c=c, s=s)
 
     ax.set_xlabel('X Label')
     ax.set_ylabel('Y Label')

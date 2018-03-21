@@ -25,5 +25,5 @@ class Ball(BenchmarkModel):
         self.info(df=df)
 
 
-ball = Ball(i=2, d=2.7)
-ball.generate_points_from_range()
+# ball = Ball(i=2, d=2.7)
+# ball.generate_points_from_range()

@@ -52,5 +52,5 @@ class Simplex(BenchmarkModel):
         return Simplex.cot_pi_12(xj) - Simplex.tan_pi_12(xi)
 
 
-model = Simplex(i=2, d=2.7)
-model.generate_points_from_range()
+# model = Simplex(i=3, d=2.7)
+# model.generate_points_from_range()

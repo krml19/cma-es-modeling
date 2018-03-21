@@ -30,8 +30,8 @@ class Cube(BenchmarkModel):
         return True
 
 
-cube = Cube(i=3, d=2.7)
-cube.generate_points_from_range()
+# cube = Cube(i=3, d=2.7)
+# cube.generate_points_from_range()
 
 
 
