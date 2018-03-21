@@ -1,7 +1,6 @@
 import numpy as np
-from scripts import sampler
+from scripts.utils import sampler
 import pandas as pd
-from scripts.drawer import draw
 from scripts.csv import file_helper as fh
 
 
@@ -40,5 +39,5 @@ class BenchmarkModel:
         return df
 
     def save(self, df):
-        fh.write_train_file(df=df, filename=self.name)
+        fh.write_train_file(df=df, filename="{}{}".format(self.name, len(self.variables)))
 

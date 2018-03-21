@@ -3,6 +3,7 @@ from scripts.benchmarks.constraint import Operator, Constraint, Constraints
 import numpy as np
 from scripts.drawer import draw
 
+
 class Simplex(BenchmarkModel):
 
     def bounds(self, i, d):
