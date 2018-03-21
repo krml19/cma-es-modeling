@@ -1,4 +1,4 @@
-from scripts.benchmarks.BenchmarkModel import BenchmarkModel
+from scripts.benchmarks.benchmark_model import BenchmarkModel
 from scripts.benchmarks.constraint import Operator, Constraint, Constraints
 import numpy as np
 from scripts.drawer import draw

@@ -1,4 +1,4 @@
-from scripts.benchmarks import Cube, Ball, Simplex, BenchmarkModel
+from scripts.benchmarks import cube, ball, simplex, benchmark_model
 
 # cube = Cube.Cube(i=2, d=2.7)
 # cube_df = cube.generate_df()
@@ -13,12 +13,12 @@ from scripts.benchmarks import Cube, Ball, Simplex, BenchmarkModel
 # simplex.save(simplex_df)
 
 
-def generate_model(model_type: BenchmarkModel.BenchmarkModel, i=2, d=2.7, rows=5000):
+def generate_model(model_type: benchmark_model.BenchmarkModel, i=2, d=2.7, rows=5000):
     model = model_type(i=i, d=d, rows=rows)
     df = model.generate_df()
     model.save(df)
 
 
-generate_model(model_type=Cube.Cube)
-generate_model(model_type=Ball.Ball)
-generate_model(model_type=Simplex.Simplex)
+generate_model(model_type=cube.Cube)
+generate_model(model_type=ball.Ball)
+generate_model(model_type=simplex.Simplex)

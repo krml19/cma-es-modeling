@@ -1,4 +1,4 @@
-from scripts.benchmarks.BenchmarkModel import BenchmarkModel
+from scripts.benchmarks.benchmark_model import BenchmarkModel
 from scripts.benchmarks.constraint import Operator, Constraint, Constraints
 from scripts.drawer import draw
 
