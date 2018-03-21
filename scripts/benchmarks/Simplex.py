@@ -1,5 +1,5 @@
 from scripts.benchmarks.BenchmarkModel import BenchmarkModel
-from scripts.model.constraint import Operator, Constraint, Constraints
+from scripts.benchmarks.constraint import Operator, Constraint, Constraints
 import numpy as np
 from scripts.drawer import draw
 
@@ -8,8 +8,9 @@ class Simplex(BenchmarkModel):
     def bounds(self, i, d):
         return -1, 2 + d
 
-    def __init__(self, i, d=2.7):
-        super().__init__(i=i, d=d)
+    def __init__(self, i, d=2.7, rows=1000):
+        super().__init__(i=i, d=d, rows=rows)
+        self.name = 'simplex'
 
         self.constraints = Constraints(constraints=[Constraint(_operator=Operator.lt, value=0),
                                                     Constraint(_operator=Operator.lt, value=0),
@@ -51,6 +52,3 @@ class Simplex(BenchmarkModel):
     def constraint2(xi, xj):
         return Simplex.cot_pi_12(xj) - Simplex.tan_pi_12(xi)
 
-
-# model = Simplex(i=3, d=2.7)
-# model.generate_points_from_range()

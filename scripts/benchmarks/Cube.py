@@ -1,5 +1,5 @@
 from scripts.benchmarks.BenchmarkModel import BenchmarkModel
-from scripts.model.constraint import Operator, Constraint, Constraints
+from scripts.benchmarks.constraint import Operator, Constraint, Constraints
 from scripts.drawer import draw
 
 class Cube(BenchmarkModel):
@@ -7,8 +7,9 @@ class Cube(BenchmarkModel):
     def bounds(self, i, d):
         return i - i * d, i + 2 * i * d
 
-    def __init__(self, i, d=2.7):
-        super().__init__(i=i, d=d)
+    def __init__(self, i, d=2.7, rows=1000):
+        super().__init__(i=i, d=d, rows=rows)
+        self.name = 'cube'
 
         self.constraints = [Constraints(constraints=[Constraint(_operator=Operator.lt, value=it),
                                                      Constraint(_operator=Operator.gt, value=it + it * d)])
@@ -28,10 +29,6 @@ class Cube(BenchmarkModel):
             if not self.constraints[index].validate(item):
                 return False
         return True
-
-
-# cube = Cube(i=3, d=2.7)
-# cube.generate_points_from_range()
 
 
 

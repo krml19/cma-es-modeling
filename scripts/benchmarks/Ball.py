@@ -1,14 +1,16 @@
 from scripts.benchmarks.BenchmarkModel import BenchmarkModel
-from scripts.model.constraint import Operator, Constraint, Constraints
+from scripts.benchmarks.constraint import Operator, Constraint, Constraints
 from scripts.drawer import draw
+
 
 class Ball(BenchmarkModel):
 
     def bounds(self, i, d):
         return i - 2 * d, i + 2 * d
 
-    def __init__(self, i, d=2.7):
-        super().__init__(i=i, d=d)
+    def __init__(self, i, d=2.7, rows=1000):
+        super().__init__(i=i, d=d, rows=rows)
+        self.name = 'ball'
 
         self.constraint = Constraints(constraints=[Constraint(_operator=Operator.gt, value=d*d)])
 
@@ -23,7 +25,3 @@ class Ball(BenchmarkModel):
         draw.draw2d(df=df, selected=[1, 0])
         draw.draw3d(df=df, selected=[0, 1, 2])
         self.info(df=df)
-
-
-# ball = Ball(i=2, d=2.7)
-# ball.generate_points_from_range()
