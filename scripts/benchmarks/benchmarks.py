@@ -13,3 +13,6 @@ def generate_model(model_type: BenchmarkModel, i=3, d=2.7, rows=5000):
 generate_model(model_type=Cube)
 generate_model(model_type=Ball)
 generate_model(model_type=Simplex)
+
+import logging
+logging.basicConfig()
