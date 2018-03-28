@@ -10,9 +10,13 @@ def generate_model(model_type: BenchmarkModel, i=3, d=2.7, rows=5000):
     model.save(df)
 
 
-generate_model(model_type=Cube)
-generate_model(model_type=Ball)
-generate_model(model_type=Simplex)
+def generate_validation_dataset(model_type: BenchmarkModel, i=3, d=2.7, rows=int(1e5)):
+    model = model_type(i=i, d=d, rows=rows)
+    model.generate_validation_dataset()
 
-import logging
-logging.basicConfig()
+
+# generate_model(model_type=Cube)
+# generate_model(model_type=Ball)
+# generate_model(model_type=Simplex)
+
+generate_validation_dataset(model_type=Cube, i=2)

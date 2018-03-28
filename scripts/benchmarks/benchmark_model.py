@@ -39,5 +39,12 @@ class BenchmarkModel:
         return df
 
     def save(self, df):
-        fh.write_train_file(df=df, filename="{}{}".format(self.name, len(self.variables)))
+        fh.write_data_frame(df=df, filename="{}{}".format(self.name, len(self.variables)))
+
+    def generate_validation_dataset(self):
+        cols = self.variable_names(self.variables)
+        samples = sampler.samples(self.bounds, rows=self.rows, cols=len(self.variables))
+        df = pd.DataFrame(samples.T, columns=cols)
+
+        fh.write_validation_file(df=df, filename="{}{}".format(self.name, len(self.variables)))
 

@@ -101,3 +101,9 @@ ENV/
 .mypy_cache/
 .idea/
 
+# cma
+cmaes/*.dat
+
+# project specific
+data/
+

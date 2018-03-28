@@ -14,14 +14,18 @@ def write_description(filename_with_dir: str, df: pd.DataFrame):
     profile.to_file(outputfile="{}.html".format(filename_with_dir))
 
 
-def write_train_file(df: pd.DataFrame, path: str='data/train/', filename='train', extension='.csv'):
+def write_data_frame(df: pd.DataFrame, path: str = 'data/train/', filename='train', extension='.csv'):
     path = os.path.abspath(path)
     makedirs(path, exist_ok=True)
 
-    file_numbers = [int(f.replace('_','.').split('.')[1]) for f in listdir(path)
-             if len(f.replace('_','.').split('.')) == 3 and f.replace('_','.').split('.')[0] == filename]
+    file_numbers = [int(f.replace('_', '.').split('.')[1]) for f in listdir(path)
+                    if len(f.replace('_', '.').split('.')) == 3 and f.replace('_', '.').split('.')[0] == filename]
     file_number = max(file_numbers) + 1 if len(file_numbers) > 0 else 0
     file_name = "{}/{}_{}".format(path, filename, file_number)
 
     write_to_csv(path="{}".format(file_name), df=df)
     write_description(file_name, df=df)
+
+
+def write_validation_file(df: pd.DataFrame, path: str = 'data/validation/', filename='validation', extension='.csv'):
+    write_data_frame(df=df, path=path, filename=filename, extension=extension)

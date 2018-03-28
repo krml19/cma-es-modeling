@@ -2,6 +2,7 @@ from scripts.benchmarks.benchmark_model import BenchmarkModel
 from scripts.benchmarks.constraint import Operator, Constraint, Constraints
 from scripts.drawer import draw
 
+
 class Cube(BenchmarkModel):
 
     def bounds(self, i, d):
