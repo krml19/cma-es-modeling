@@ -5,12 +5,17 @@ from matplotlib.patches import PathPatch
 
 
 def draw2d(df, selected=[0, 1]):
-    cols = df.columns
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    red = (1.0, 0.0, 0.0, 0.5)
+    green = (0.0, 1.0, 0.0, 0.5)
+    colors = [green if v == True else red for v in df['valid'].values]
+    sizes = [1 if v == True else 0.5 for v in df['valid'].values]
 
-    color = np.where(df['valid'].values == True, 'g', 'r') if 'valid' in df else 'b'
-    df.plot(kind='scatter', x=cols[selected[0]], y=cols[selected[1]], c=color)
-
-    draw_cube2d_bounds()
+    x_1 = df.columns[selected[0]]
+    x_2 = df.columns[selected[1]]
+    plt.scatter(x=df[x_1].values, y=df[x_2].values, c=colors, s=sizes, hold=True)
+    draw_cube2d_bounds(ax)
     plt.show()
 
 
@@ -30,26 +35,30 @@ def draw3d(df, selected=[0, 1, 2]):
     plt.show()
 
 
-def verts(i, d=2.7):
-    return [(i, i), (i, i+i*d), (i+i*d, i+i*d), (i+i*d, i), (0, 0)]
+def verts(bounds):
+    x1 = bounds[0]
+    x2 = bounds[1]
+    return [(x1[0], x2[0]), (x1[1], x2[0]), (x1[1], x2[1]), (x1[0], x2[1]), (0, 0)]
 
 
 def verts_codes():
     return [Path.MOVETO] + [Path.LINETO]*3 + [Path.CLOSEPOLY]
 
 
-def draw_cube2d_bounds():
-    codes = verts_codes()
-    vertices = verts(1)
+def cube_rect():
+    bounds = [[1, 3.7], [2, 7.4]]
+
+    return verts_codes(), verts(bounds)
+
+
+def draw_cube2d_bounds(ax):
+    codes, vertices = cube_rect()
 
     vertices = np.array(vertices, float)
     path = Path(vertices, codes)
 
     pathpatch = PathPatch(path, facecolor='None', edgecolor='blue')
 
-    fig, ax = plt.subplots()
     ax.add_patch(pathpatch)
     ax.set_title('A compound path')
-
-    ax.dataLim.update_from_data_xy(vertices)
-    ax.autoscale_view()
+    ax.set_facecolor((1, 1, 1, 0.5))
