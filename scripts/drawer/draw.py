@@ -4,18 +4,24 @@ from matplotlib.path import Path
 from matplotlib.patches import PathPatch
 
 
-def draw2d(df, selected=[0, 1]):
+def draw2d(df, selected=[0, 1], constraints=None):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     red = (1.0, 0.0, 0.0, 0.5)
     green = (0.0, 1.0, 0.0, 0.5)
+
     colors = [green if v == True else red for v in df['valid'].values]
     sizes = [1 if v == True else 0.5 for v in df['valid'].values]
 
     x_1 = df.columns[selected[0]]
     x_2 = df.columns[selected[1]]
-    plt.scatter(x=df[x_1].values, y=df[x_2].values, c=colors, s=sizes, hold=True)
+    plt.scatter(x=df[x_1].values, y=df[x_2].values, c=colors, s=sizes)
+
+    ax.set_xlabel(x_1)
+    ax.set_ylabel(x_2)
+
     draw_cube2d_bounds(ax)
+    draw_constraints(ax, constraints=constraints)
     plt.show()
 
 
@@ -47,6 +53,7 @@ def verts_codes():
 
 def cube_rect():
     bounds = [[1, 3.7], [2, 7.4]]
+    # bounds = [[-3, 3], [-5, 5]]
 
     return verts_codes(), verts(bounds)
 
@@ -60,5 +67,16 @@ def draw_cube2d_bounds(ax):
     pathpatch = PathPatch(path, facecolor='None', edgecolor='blue')
 
     ax.add_patch(pathpatch)
-    ax.set_title('A compound path')
     ax.set_facecolor((1, 1, 1, 0.5))
+
+
+def draw_constraints(ax, constraints):
+    if constraints is None:
+        return
+
+    for constraint in constraints:
+        normalized = np.linalg.norm(constraint)
+        x0 = constraint[0] / normalized
+        x1 = constraint[1] / normalized
+        ax.plot([0, x0], [0, x1], 'k-')
+

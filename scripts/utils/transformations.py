@@ -1,26 +1,15 @@
-import numpy as np
+from sklearn.preprocessing import StandardScaler
 
 
-class Transformation:
+class StandardTransformer:
+    def __init__(self, copy=True, with_mean=True, with_std=True):
+        self.__standard_scaler = StandardScaler(copy=copy, with_mean=with_mean, with_std=with_std)
 
-    def operation(self, array: np.ndarray) -> np.ndarray:
-        pass
+    def fit(self, X):
+        self.__standard_scaler.fit(X)
 
-    def inverse_operation(self, array: np.ndarray) -> np.ndarray:
-        pass
+    def transform(self, X):
+        return self.__standard_scaler.transform(X)
 
-
-class StandardizationTransformation(Transformation):
-    __mean = 0
-    __std = 0
-
-    def operation(self, array: np.ndarray):
-        assert isinstance(array, np.ndarray)
-        self.__mean = array.mean()
-        self.__std = array.std()
-
-        return np.vectorize(lambda x: (x - self.__mean) / self.__std, array)
-
-    def inverse_operation(self, array: np.ndarray):
-        assert isinstance(array, np.ndarray)
-        return np.vectorize(lambda x: x * self.__std + self.__mean, array)
+    def inverse_transform(self, X):
+        return self.__standard_scaler.inverse_transform(X)
