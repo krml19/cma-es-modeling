@@ -2,10 +2,8 @@ import cma
 import numpy as np
 import pandas as pd
 from scripts.drawer import draw
-from scripts.utils import sampler
 from scripts.utils.logger import Logger
 from sklearn.preprocessing import StandardScaler
-import time
 
 
 log = Logger()
@@ -13,8 +11,8 @@ log = Logger()
 
 class CMAESAlgorithm:
 
-    def __init__(self, train_X: np.matrix, valid_X: np.matrix, w_0=1, n_constraints=2, sigma0=2, scaler=StandardScaler()):
-        self.w_0 = w_0
+    def __init__(self, train_X: np.matrix, valid_X: np.matrix, w0=1, n_constraints=2, sigma0=1, scaler=StandardScaler()):
+        self.w0 = w0
         self.train_X = train_X
         self.valid_X = valid_X
         self.dimensions = self.train_X.shape[1]
@@ -37,13 +35,13 @@ class CMAESAlgorithm:
         for wi in w:
             # b
             b = self.train_X.dot(wi)
-            bf = b <= self.w_0
+            bf = b <= self.w0
             b_final = np.multiply(bf, b_final)
             log.debug("b: {}".format(bf))
 
             # p
             p = self.valid_X.dot(wi)
-            p = p <= self.w_0
+            p = p <= self.w0
             p_final = np.multiply(p, p_final)
             log.debug("p: {}".format(p))
 
@@ -82,18 +80,20 @@ class CMAESAlgorithm:
         # x0 = [-1 / 3.7, 0, 1, 0, 0, 1 / 2, 0, -1 / 7.4]
         # seed = 767657
 
-        mins = 1 / self.train_X.min(axis=0)
-        maxs = 1 / self.train_X.max(axis=0)
+        # bounding box
+        mins = 1/self.train_X.min(axis=0)
+        maxs = 1/self.train_X.max(axis=0)
         min0 = mins[0]
         min1 = mins[1]
         max0 = maxs[0]
         max1 = maxs[1]
 
         x0 = [min0, 0, max0, 0, 0, min1, 0, max1]
+        self.objective_function(np.array(x0))
         self.draw_results(np.array(x0))
 
-        seed = time.time()
-        es = cma.CMAEvolutionStrategy(x0=x0, sigma0=self.sigma0, inopts={'seed': seed, 'maxiter': 1})
+        seed = 77665
+        es = cma.CMAEvolutionStrategy(x0=x0, sigma0=self.sigma0, inopts={'seed': seed, 'maxiter': 100})
 
         # iterate until termination
         while not es.stop():
@@ -116,7 +116,7 @@ class CMAESAlgorithm:
         for wi in w:
             # p
             p = self.valid_X.dot(wi)
-            p = p <= self.w_0
+            p = p <= self.w0
             p_final = np.multiply(p, p_final)
 
         names = ['x_{}'.format(x) for x in np.arange(self.valid_X.shape[1])]
@@ -129,7 +129,9 @@ class CMAESAlgorithm:
 
 # load train data
 train_X = pd.read_csv('data/train/cube2_0.csv', nrows=500)
+draw.draw2d(train_X)
 train_X = train_X.values
+
 
 # load valid data
 valid_X = pd.read_csv('data/validation/cube2_0.csv', nrows=None)
