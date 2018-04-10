@@ -4,7 +4,7 @@ from matplotlib.path import Path
 from matplotlib.patches import PathPatch
 
 
-def draw2d(df, selected=[0, 1], constraints=None):
+def draw2d(df, selected=[0, 1], constraints=None, title=None):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     red = (1.0, 0.0, 0.0, 0.5)
@@ -24,6 +24,8 @@ def draw2d(df, selected=[0, 1], constraints=None):
 
     ax.set_xlabel(x_1)
     ax.set_ylabel(x_2)
+    if title is not None:
+        ax.set_title(title)
 
     draw_cube2d_bounds(ax)
     draw_constraints(ax, constraints=constraints)
