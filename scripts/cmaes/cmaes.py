@@ -2,6 +2,7 @@ import cma
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+import itertools
 
 from scripts.drawer import draw
 from scripts.utils.logger import Logger
@@ -17,7 +18,6 @@ class CMAESAlgorithm:
         self.w0 = w0
         self.train_X = train_X
         self.valid_X = valid_X
-        self.dimensions = self.train_X.shape[1]
         self.n_constraints = n_constraints
         self.sigma0 = sigma0
         self.es = None
@@ -75,7 +75,7 @@ class CMAESAlgorithm:
 
     def bounding_box(self):
         # bounding box
-        size_coefficient = 0.01
+        size_coefficient = 1
         mins = size_coefficient * (1 / self.train_X.min(axis=0))
         maxs = size_coefficient * (1 / self.train_X.max(axis=0))
         min0 = mins[0]
@@ -88,14 +88,43 @@ class CMAESAlgorithm:
         x0 = [min0, noise[0], max0, noise[1], noise[2], min1, noise[3], max1]
         return x0
 
+    @staticmethod
+    def ct(arr, r, decimals):
+        a = np.concatenate((np.array([2 * np.pi]), arr))
+        si = np.sin(a)
+        si[0] = 1
+        si = np.cumprod(si)
+        co = np.cos(a)
+        co = np.roll(co, -1)
+        return np.round(si * co * r, decimals=decimals)
+
+    @staticmethod
+    def cartesian(n=1, decimals=5, r=1):
+        phis = np.arange(n)/n*2*np.pi
+
+        coordinates = [CMAESAlgorithm.ct([phi], r=r, decimals=decimals) for phi in phis]
+        flatten = np.array(list(itertools.chain.from_iterable(coordinates)))
+        return flatten
+
+    @staticmethod
+    def scale_factor(train_data_set: np.array):
+        return np.abs(train_data_set).max()
+
+    @staticmethod
+    def bounding_sphere(n: int, train_data_set: np.array, r=1, decimals=5):
+        x0 = CMAESAlgorithm.cartesian(n, decimals=decimals, r=r)
+        x0 = x0 / CMAESAlgorithm.scale_factor(train_data_set)
+        return x0
+
     def random_initial_solution(self):
-        x0 = sampler.uniform_samples(-10, 10, size=(self.dimensions * self.n_constraints,))
+        x0 = sampler.uniform_samples(-10, 10, size=(self.n_constraints,))
         # x0 = [2] * (self.dimensions * self.number_of_constraints)
         return x0
 
     def cma_es(self):
         # x0 = self.random_initial_solution()
-        x0 = self.bounding_box()
+        # x0 = self.bounding_box()
+        x0 = CMAESAlgorithm.bounding_sphere(n=self.n_constraints, train_data_set=self.train_X)
         f = self.objective_function(np.array(x0))
         self.draw_results(np.array(x0), title='Initial solution: {}'.format(f))
 
@@ -135,20 +164,24 @@ class CMAESAlgorithm:
         draw.draw2d(df, constraints=w, title=title)
 
 
-# load train data
-train_X = pd.read_csv('data/train/cube2_0.csv', nrows=500)
-draw.draw2d(train_X, title='Training points')
-train_X = train_X.values
+def data_sets(name: str):
+    # load train data
+    train_X = pd.read_csv('data/train/{}_0.csv'.format(name), nrows=500)
+    draw.draw2d(train_X, title='Training points')
+    train_X = train_X.values
 
-# load valid data
-valid_X = pd.read_csv('data/validation/cube2_0.csv', nrows=None)
-valid_X = valid_X.values
+    # load valid data
+    valid_X = pd.read_csv('data/validation/{}_0.csv'.format(name), nrows=None)
+    valid_X = valid_X.values
 
-# mock_valid_X = pd.read_csv('data/mock/mock_valid.csv')
-# mock_valid_X = mock_valid_X.values
+    return train_X, valid_X
+
+
+# load data
+train_X, valid_X = data_sets('cube2')
 
 # run algorithm
-algorithm = CMAESAlgorithm(train_X=train_X, valid_X=valid_X, n_constraints=4, w0=[1], sigma0=1)
+algorithm = CMAESAlgorithm(train_X=train_X, valid_X=valid_X, n_constraints=8, w0=[1], sigma0=1)
 algorithm.cma_es()
 
 # scaler = StandardScaler()

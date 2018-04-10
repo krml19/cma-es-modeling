@@ -17,8 +17,8 @@ def generate_validation_dataset(model_type: BenchmarkModel, i=3, d=2.7, rows=int
     model.generate_validation_dataset()
 
 
-generate_model(model_type=Cube)
-generate_model(model_type=Ball)
-generate_model(model_type=Simplex)
+# generate_model(model_type=Cube)
+# generate_model(model_type=Ball)
+# generate_model(model_type=Simplex)
 
-# generate_validation_dataset(model_type=Cube, i=2)
+generate_validation_dataset(model_type=Ball, i=2)

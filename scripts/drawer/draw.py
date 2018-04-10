@@ -27,7 +27,7 @@ def draw2d(df, selected=[0, 1], constraints=None, title=None):
     if title is not None:
         ax.set_title(title)
 
-    draw_cube2d_bounds(ax)
+    # draw_cube2d_bounds(ax)
     draw_constraints(ax, constraints=constraints)
     plt.show()
 
