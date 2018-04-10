@@ -9,9 +9,14 @@ def draw2d(df, selected=[0, 1], constraints=None):
     ax = fig.add_subplot(111)
     red = (1.0, 0.0, 0.0, 0.5)
     green = (0.0, 1.0, 0.0, 0.5)
+    blue = (0.0, 0.0, 1.0, 0.5)
 
-    colors = [green if v == True else red for v in df['valid'].values]
-    sizes = [1 if v == True else 0.5 for v in df['valid'].values]
+    if 'valid' in df:
+        colors = [green if v == True else red for v in df['valid'].values]
+        sizes = [1 if v == True else 0.5 for v in df['valid'].values]
+    else:
+        colors = blue
+        sizes = 0.5
 
     x_1 = df.columns[selected[0]]
     x_2 = df.columns[selected[1]]
