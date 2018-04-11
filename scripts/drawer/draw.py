@@ -52,6 +52,7 @@ def draw2dmodel(train, df, model, constraints=None, title=None):
         draw_ellipse(ax2, width=5.4, height=5.4)
     elif model == 'simplex':
         draw_simplex(ax2)
+    ax2.autoscale()
 
     # constraints
     draw_constraints(ax3, constraints=constraints, title='w')
