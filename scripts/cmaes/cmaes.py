@@ -70,21 +70,6 @@ class CMAESAlgorithm:
         log.info("tp: {},\trecall: {},\tp: {},\t pr_y: {},\t\tf: {}".format(tp, p_final, recall, pr_y, f))
         return f
 
-    def bounding_box(self):
-        # bounding box
-        size_coefficient = 1
-        mins = size_coefficient * (1 / self.train_X.min(axis=0))
-        maxs = size_coefficient * (1 / self.train_X.max(axis=0))
-        min0 = mins[0]
-        min1 = mins[1]
-        max0 = maxs[0]
-        max1 = maxs[1]
-        noise = 4 * [0]
-        # noise = 4 *[0.1]
-        noise = sampler.uniform_samples(0.0, 0.5, size=(4,))
-        x0 = [min0, noise[0], max0, noise[1], noise[2], min1, noise[3], max1]
-        return x0
-
     @staticmethod
     def ct(arr, r, decimals):
         a = np.concatenate((np.array([2 * np.pi]), arr))
@@ -113,10 +98,6 @@ class CMAESAlgorithm:
         x0 = x0 / CMAESAlgorithm.scale_factor(train_data_set)
         return x0
 
-    def random_initial_solution(self):
-        x0 = sampler.uniform_samples(-10, 10, size=(self.n_constraints,))
-        return x0
-
     def cma_es(self):
         x0 = CMAESAlgorithm.bounding_sphere(n=self.n_constraints, train_data_set=self.train_X)
         f = self.objective_function(np.array(x0))
@@ -142,31 +123,24 @@ class CMAESAlgorithm:
     def draw_results(self, w, title=None):
         w = np.split(w, self.n_constraints)
 
-        p_final = np.ones((self.valid_X.shape[0],))
-        for wi in w:
-            # p
-            p = self.valid_X.dot(wi)
-            for wi0 in self.w0:
-                pi = p <= wi0
-                p_final = np.multiply(pi, p_final)
-
-        b_final = np.ones((self.train_X.shape[0],))
-        for wi in w:
-            # p
-            b = self.train_X.dot(wi)
-            for wi0 in self.w0:
-                bi = b <= wi0
-                b_final = np.multiply(bi, b_final)
+        def __valid_points(dataset: np.ndarray):
+            p_final = np.ones((dataset.shape[0],))
+            for wi in w:
+                # p
+                p = dataset.dot(wi)
+                for wi0 in self.w0:
+                    pi = p <= wi0
+                    p_final = np.multiply(pi, p_final)
+            return pd.Series(data=p_final, name='valid')
 
         names = ['x_{}'.format(x) for x in np.arange(self.valid_X.shape[1])]
         data = self.valid_X if self.scaler is None else self.scaler.inverse_transform(self.valid_X)
 
         valid = pd.DataFrame(data=data, columns=names)
-        valid['valid'] = pd.Series(data=p_final, name='valid')
-        # draw.draw2d(df, constraints=w, title=title)
+        valid['valid'] = __valid_points(self.valid_X)
         train = self.train_X if self.scaler is None else self.scaler.inverse_transform(self.train_X)
         train = pd.DataFrame(data=train, columns=names)
-        train['valid'] = pd.Series(data=b_final, name='valid')
+        train['valid'] = __valid_points(self.train_X)
 
         draw.draw2dmodel(df=valid, train=train, constraints=w, title=title, model=self.model_type)
 
