@@ -14,7 +14,7 @@ log = Logger()
 class CMAESAlgorithm:
 
     def __init__(self, train_X: np.matrix, valid_X: np.matrix, w0=list([1, -1]), n_constraints=2, sigma0=5,
-                 scaler=StandardScaler()):
+                 scaler=StandardScaler(), model_type='cube'):
         self.w0 = w0
         self.train_X = train_X
         self.valid_X = valid_X
@@ -22,6 +22,7 @@ class CMAESAlgorithm:
         self.sigma0 = sigma0
         self.es = None
         self.scaler = scaler
+        self.model_type = model_type
         if scaler is not None:
             self.scaler.fit(train_X)
             self.train_X = self.scaler.transform(train_X)
@@ -69,10 +70,6 @@ class CMAESAlgorithm:
         log.info("tp: {},\trecall: {},\tp: {},\t pr_y: {},\t\tf: {}".format(tp, p_final, recall, pr_y, f))
         return f
 
-    def mock_cma_es(self):
-        mock_x0 = [1 / 3, 0, -1 / 3, 0, 0, 1 / 5, 0, -1 / 5]
-        self.draw_results(np.array(mock_x0))
-
     def bounding_box(self):
         # bounding box
         size_coefficient = 1
@@ -118,12 +115,9 @@ class CMAESAlgorithm:
 
     def random_initial_solution(self):
         x0 = sampler.uniform_samples(-10, 10, size=(self.n_constraints,))
-        # x0 = [2] * (self.dimensions * self.number_of_constraints)
         return x0
 
     def cma_es(self):
-        # x0 = self.random_initial_solution()
-        # x0 = self.bounding_box()
         x0 = CMAESAlgorithm.bounding_sphere(n=self.n_constraints, train_data_set=self.train_X)
         f = self.objective_function(np.array(x0))
         self.draw_results(np.array(x0), title='Initial solution: {}'.format(f))
@@ -156,37 +150,44 @@ class CMAESAlgorithm:
                 pi = p <= wi0
                 p_final = np.multiply(pi, p_final)
 
+        b_final = np.ones((self.train_X.shape[0],))
+        for wi in w:
+            # p
+            b = self.train_X.dot(wi)
+            for wi0 in self.w0:
+                bi = b <= wi0
+                b_final = np.multiply(bi, b_final)
+
         names = ['x_{}'.format(x) for x in np.arange(self.valid_X.shape[1])]
         data = self.valid_X if self.scaler is None else self.scaler.inverse_transform(self.valid_X)
 
-        df = pd.DataFrame(data=data, columns=names)
-        df['valid'] = pd.Series(data=p_final, name='valid')
-        draw.draw2d(df, constraints=w, title=title)
+        valid = pd.DataFrame(data=data, columns=names)
+        valid['valid'] = pd.Series(data=p_final, name='valid')
+        # draw.draw2d(df, constraints=w, title=title)
+        train = self.train_X if self.scaler is None else self.scaler.inverse_transform(self.train_X)
+        train = pd.DataFrame(data=train, columns=names)
+        train['valid'] = pd.Series(data=b_final, name='valid')
+
+        draw.draw2dmodel(df=valid, train=train, constraints=w, title=title, model=self.model_type)
 
 
-def data_sets(name: str):
+def data_sets(model_type: str):
     # load train data
-    train_X = pd.read_csv('data/train/{}_0.csv'.format(name), nrows=500)
-    draw.draw2d(train_X, title='Training points')
+    train_X = pd.read_csv('data/train/{}2_0.csv'.format(model_type), nrows=500)
     train_X = train_X.values
 
     # load valid data
-    valid_X = pd.read_csv('data/validation/{}_0.csv'.format(name), nrows=None)
+    valid_X = pd.read_csv('data/validation/{}2_0.csv'.format(model_type), nrows=None)
     valid_X = valid_X.values
 
     return train_X, valid_X
 
 
 # load data
-train_X, valid_X = data_sets('cube2')
+model_type = 'cube'
+train_X, valid_X = data_sets(model_type)
 
-# run algorithm
-algorithm = CMAESAlgorithm(train_X=train_X, valid_X=valid_X, n_constraints=8, w0=[1], sigma0=1)
+# # run algorithm
+algorithm = CMAESAlgorithm(train_X=train_X, valid_X=valid_X, n_constraints=6, w0=[1], sigma0=1, model_type=model_type)
 algorithm.cma_es()
 
-# scaler = StandardScaler()
-# scaler.fit(mock_valid_X)
-# scaled = scaler.transform(mock_valid_X)
-# df = pd.DataFrame(data=scaled, columns=['x_xx', 'x_yyy'])
-# # draw.draw2d(df)
-# print(df)
