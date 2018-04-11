@@ -12,8 +12,8 @@ log = Logger()
 
 class CMAESAlgorithm:
 
-    def __init__(self, train_X: np.matrix, valid_X: np.matrix, w0, n_constraints: int, sigma0: float,
-                 scaler: StandardScaler, model_type: str):
+    def __init__(self, train_X: np.ndarray, valid_X: np.ndarray, w0, n_constraints: int, sigma0: float,
+                 scaler: [StandardScaler, None], model_type: str, seed: int=77665):
         self.w0 = w0
         self.train_X = train_X
         self.valid_X = valid_X
@@ -22,6 +22,7 @@ class CMAESAlgorithm:
         self.sigma0 = sigma0
         self.es = None
         self.scaler = scaler
+        self.seed = seed
         self.model_type = model_type
         if scaler is not None:
             self.scaler.fit(train_X)
@@ -31,7 +32,7 @@ class CMAESAlgorithm:
     def objective_function(self, w):
         w = np.reshape(w, newshape=(self.n_constraints, -1)).T
 
-        def obls(X):
+        def _objective_function_helper(X):
             x = np.matmul(X, w)
             x = x <= self.w0
             _len = x.shape[0]
@@ -39,11 +40,11 @@ class CMAESAlgorithm:
             return _len, _sum
 
         # recall
-        card_b, tp = obls(self.train_X)
+        card_b, tp = _objective_function_helper(self.train_X)
         recall = tp / card_b
 
         # p
-        card_p, p = obls(self.valid_X)
+        card_p, p = _objective_function_helper(self.valid_X)
 
         # p_y
         pr_y = p / card_p
@@ -74,8 +75,8 @@ class CMAESAlgorithm:
         return flatten
 
     @staticmethod
-    def scale_factor(train_data_set: np.array, offset_coefficient=2):
-        return np.abs(train_data_set).max() * offset_coefficient
+    def scale_factor(train_data_set: np.array, margin=2):
+        return np.abs(train_data_set).max() * margin
 
     @staticmethod
     def bounding_sphere(n: int, train_data_set: np.array, r=1, decimals=5):
@@ -88,8 +89,7 @@ class CMAESAlgorithm:
         f = self.objective_function(np.array(x0))
         self.draw_results(np.array(x0), title='Initial solution: {}'.format(f))
 
-        seed = 77665
-        es = cma.CMAEvolutionStrategy(x0=x0, sigma0=self.sigma0, inopts={'seed': seed, 'maxiter': int(1e6)})
+        es = cma.CMAEvolutionStrategy(x0=x0, sigma0=self.sigma0, inopts={'seed': self.seed, 'maxiter': int(1e6)})
 
         # iterate until termination
         while not es.stop():
@@ -130,20 +130,16 @@ class CMAESAlgorithm:
         draw.draw2dmodel(df=valid, train=train, constraints=w, title=title, model=self.model_type)
 
 
-def data_sets(model_type: str):
+def data_sets(model: str):
     # load train data
-    # fixme Remove:
-    # train_X = pd.read_csv('data/mock/mock_valid.csv', nrows=500)
-    train_X = pd.read_csv('data/train/{}2_0.csv'.format(model_type), nrows=500)
-    # train_X = np.matrix(train_X.values)
-    train_X = (train_X.values)
+    _train_X = pd.read_csv('data/train/{}2_0.csv'.format(model), nrows=500)
+    _train_X = _train_X.values
 
     # load valid data
-    valid_X = pd.read_csv('data/validation/{}2_0.csv'.format(model_type), nrows=None)
-    # valid_X = np.matrix(valid_X.values)
-    valid_X = (valid_X.values)
+    _valid_X = pd.read_csv('data/validation/{}2_0.csv'.format(model), nrows=None)
+    _valid_X = _valid_X.values
 
-    return train_X, valid_X
+    return _train_X, _valid_X
 
 
 # load data
