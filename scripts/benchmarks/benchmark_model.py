@@ -6,7 +6,7 @@ from scripts.csv import file_helper as fh
 
 class BenchmarkModel:
 
-    def __init__(self, i, d=2.7, rows=1000, L=1e10, name=None, B=list([1, 1])):
+    def __init__(self, i, d=2.7, rows=1000, L=1e10, name=None, B=list([1, 1]), seed=404):
         self.variables = np.arange(1, i + 1)
         self.d = d * np.ones(i)
         self.name = name
@@ -14,6 +14,7 @@ class BenchmarkModel:
         self.L = L
         self.B = B
         self.k = len(self.B)
+        self.seed = seed
 
     def variable_names(self, variables):
         return ["x_{}".format(i) for i in variables]
@@ -33,7 +34,7 @@ class BenchmarkModel:
 
     def generate_df(self, take_only_valid_points=True):
         cols = self.variable_names(self.variables)
-        samples = sampler.samples(self.bounds, rows=self.rows, cols=len(self.variables))
+        samples = sampler.samples(self.bounds, rows=self.rows, cols=len(self.variables), seed=self.seed)
         df = pd.DataFrame(samples.T, columns=cols)
         df['valid'] = self.generate_valid_column(df)
         if take_only_valid_points:
@@ -42,12 +43,12 @@ class BenchmarkModel:
         return df
 
     def save(self, df):
-        fh.write_data_frame(df=df, filename="{}{}".format(self.name, len(self.variables)))
+        fh.write_data_frame(df=df, filename="{}{}_seed_{}".format(self.name, len(self.variables), self.seed))
 
     def generate_validation_dataset(self):
         cols = self.variable_names(self.variables)
         samples = sampler.samples(self.bounds, rows=self.rows, cols=len(self.variables))
         df = pd.DataFrame(samples.T, columns=cols)
 
-        fh.write_validation_file(df=df, filename="{}{}".format(self.name, len(self.variables)))
+        fh.write_validation_file(df=df, filename="{}{}_seed_{}".format(self.name, len(self.variables), self.seed))
 
