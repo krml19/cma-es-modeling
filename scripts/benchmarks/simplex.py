@@ -7,15 +7,16 @@ from scripts.drawer import draw
 class Simplex(BenchmarkModel):
 
     def bounds(self, i, d):
-        return -1, 2 + d
+        return -1, 2 * self.k + d
 
     def __init__(self, i, d=2.7, rows=1000):
-        super().__init__(i=i, d=d, rows=rows)
-        self.name = 'simplex'
+        super().__init__(i=i, d=d, rows=rows, name='simplex')
 
-        self.constraints = Constraints(constraints=[Constraint(_operator=Operator.lt, value=0),
-                                                    Constraint(_operator=Operator.lt, value=0),
-                                                    Constraint(_operator=Operator.gt, value=d)])
+        self.constraint_sets = [
+            Constraints(constraints=[Constraint(_operator=Operator.lt, value=2 * j - 2 - self.L * (1 - bj)),
+                                     Constraint(_operator=Operator.lt, value=2 * j - 2 - self.L * (1 - bj)),
+                                     Constraint(_operator=Operator.gt, value=j * d + self.L * (1 - bj))]) for j, bj in
+            enumerate(self.B, start=1)]
 
         self.bounds = [self.bounds(i=ii, d=d) for ii in self.variables]
 
@@ -26,14 +27,19 @@ class Simplex(BenchmarkModel):
         self.info(df=df)
 
     def matches_constraints(self, row):
+        validation_result = [self._matches_constraints_set(constraints=constraints, row=row) for constraints in
+                             self.constraint_sets]
+        return sum(validation_result) >= 1
+
+    def _matches_constraints_set(self, constraints, row):
         _sum = sum(row)
-        if not self.constraints.constraints[2].match(_sum):
+        if not constraints.constraints[2].match(_sum):
             return False
 
         for xi, xj in zip(row.values[::1], row.values[1::1]):
-            if not self.constraints.constraints[0].match(Simplex.constraint1(xi, xj)):
+            if not constraints.constraints[0].match(Simplex.constraint1(xi, xj)):
                 return False
-            if not self.constraints.constraints[1].match(Simplex.constraint2(xi, xj)):
+            if not constraints.constraints[1].match(Simplex.constraint2(xi, xj)):
                 return False
         return True
 
