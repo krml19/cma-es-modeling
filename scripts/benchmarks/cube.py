@@ -6,15 +6,17 @@ from scripts.drawer import draw
 class Cube(BenchmarkModel):
 
     def bounds(self, i, d):
-        return i - i * d, i + 2 * i * d
+        return i - i * d * self.k, i + 2 * i * d * self.k
 
     def __init__(self, i, d=2.7, rows=1000):
-        super().__init__(i=i, d=d, rows=rows)
-        self.name = 'cube'
-
-        self.constraints = [Constraints(constraints=[Constraint(_operator=Operator.lt, value=it),
-                                                     Constraint(_operator=Operator.gt, value=it + it * d)])
-                            for it in self.variables]
+        super().__init__(i=i, d=d, rows=rows, name='cube')
+        self.constraint_sets = list()
+        for j, bj in enumerate(self.B, start=1):
+            self.constraint_sets.append([
+                Constraints(constraints=[Constraint(_operator=Operator.lt, value=it * j - self.L + self.L * bj),
+                                         Constraint(_operator=Operator.gt,
+                                                    value=it * j + it * d + self.L - self.L * bj)])
+                for it in self.variables])
 
         self.bounds = [self.bounds(i=ii, d=d) for ii in self.variables]
 
@@ -26,14 +28,11 @@ class Cube(BenchmarkModel):
         self.info(df=df)
 
     def matches_constraints(self, row):
-        for index, item in enumerate(row):
-            if not self.constraints[index].validate(item):
+        validation_result = [self.match(constraints, row) for constraints in self.constraint_sets]
+        return sum(validation_result) >= 1
+
+    def match(self, constraints, row):
+        for index, xi in enumerate(row):
+            if not constraints[index].validate(xi):
                 return False
         return True
-
-
-
-
-
-
-

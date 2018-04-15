@@ -6,11 +6,14 @@ from scripts.csv import file_helper as fh
 
 class BenchmarkModel:
 
-    def __init__(self, i, d=2.7, rows=1000):
+    def __init__(self, i, d=2.7, rows=1000, L=1e10, name=None, B=list([1, 1])):
         self.variables = np.arange(1, i + 1)
         self.d = d * np.ones(i)
-        self.name = None
+        self.name = name
         self.rows = rows
+        self.L = L
+        self.B = B
+        self.k = len(self.B)
 
     def variable_names(self, variables):
         return ["x_{}".format(i) for i in variables]
