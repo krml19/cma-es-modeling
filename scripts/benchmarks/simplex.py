@@ -2,11 +2,12 @@ from scripts.benchmarks.benchmark_model import BenchmarkModel
 from scripts.benchmarks.constraint import Operator, Constraint, Constraints
 import numpy as np
 from scripts.drawer import draw
+from scripts.utils.logger import Logger
 
 
 class Simplex(BenchmarkModel):
 
-    def bounds(self, i, d):
+    def _bounds(self, i, d):
         return -1, 2 * self.k + d
 
     def __init__(self, i, d=2.7, rows=1000):
@@ -18,7 +19,7 @@ class Simplex(BenchmarkModel):
                                      Constraint(_operator=Operator.gt, value=j * d + self.L * (1 - bj))]) for j, bj in
             enumerate(self.B, start=1)]
 
-        self.bounds = [self.bounds(i=ii, d=d) for ii in self.variables]
+        self.bounds = [self._bounds(i=ii, d=d) for ii in self.variables]
 
     def generate_points_from_range(self):
         df = self.generate_df()

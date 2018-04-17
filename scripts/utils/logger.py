@@ -4,11 +4,11 @@ import logging
 class Logger:
     _logger = None
 
-    def __init__(self, logger_log_level=logging.INFO, console_log_level=logging.DEBUG, file_log_level=logging.INFO):
-        self._configure_logger(logger_log_level=logger_log_level, console_log_level=console_log_level, file_log_level=file_log_level)
+    def __init__(self, logger_log_level=logging.DEBUG, console_log_level=logging.DEBUG, file_log_level=logging.INFO, name=__name__):
+        self._configure_logger(logger_log_level=logger_log_level, console_log_level=console_log_level, file_log_level=file_log_level, name=name)
 
-    def _configure_logger(self, logger_log_level=logging.NOTSET, console_log_level=logging.DEBUG, file_log_level=logging.INFO):
-        self._logger = logging.getLogger(__name__)
+    def _configure_logger(self, logger_log_level, console_log_level, file_log_level, name):
+        self._logger = logging.getLogger(name=name)
         self._logger.setLevel(logger_log_level)
 
         # create a file handler

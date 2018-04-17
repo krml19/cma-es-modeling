@@ -6,7 +6,7 @@ import numpy as np
 
 class Ball(BenchmarkModel):
 
-    def bounds(self, i, d):
+    def _bounds(self, i, d):
         return i - 2 * d, i + 2 * d + (2 * np.sqrt(6) * (self.k - 1) * d) / np.pi
 
     def __init__(self, i, d=2.7, rows=1000):
@@ -16,7 +16,7 @@ class Ball(BenchmarkModel):
             Constraints(constraints=[Constraint(_operator=Operator.gt, value=d * d + self.L * (1 - bj))]) for bj in
             self.B]
 
-        self.bounds = [self.bounds(i=ii, d=d) for ii in self.variables]
+        self.bounds = [self._bounds(i=ii, d=d) for ii in self.variables]
 
     def matches_constraints(self, row):
         validation_result = [self._match_constraint_set(constraint=constraints, j=j, row=row) for j, constraints in

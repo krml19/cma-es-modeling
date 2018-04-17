@@ -5,7 +5,7 @@ from scripts.drawer import draw
 
 class Cube(BenchmarkModel):
 
-    def bounds(self, i, d):
+    def _bounds(self, i, d):
         return i - i * d * self.k, i + 2 * i * d * self.k
 
     def __init__(self, i, d=2.7, rows=1000):
