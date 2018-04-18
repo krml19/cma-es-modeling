@@ -18,6 +18,7 @@ class BenchmarkModel:
         self.k = len(self.B)
         self.seed = seed
         self.logger = Logger(name=name)
+        self.bounds = None
 
     def variable_names(self, variables):
         return ["x_{}".format(i) for i in variables]
@@ -62,12 +63,12 @@ class BenchmarkModel:
 
         fh.write_validation_file(df=df, filename="{}{}_seed_{}".format(self.name, len(self.variables), self.seed))
 
-    def bounding_sphere(self):
+    def optimal_bounding_sphere(self):
         w = list()
         for i, d in enumerate(self.d, start=1):
             _bounds = self._bounds(i=i, d=d)
             for j, bound in enumerate(_bounds):
                 wi = np.zeros(self.i)
-                wi[j] = -1 / bound
+                wi[j] = 1 / bound
                 w.append(wi)
         return np.concatenate(w)

@@ -1,6 +1,7 @@
 from scripts.benchmarks.benchmark_model import BenchmarkModel
 from scripts.benchmarks.constraint import Operator, Constraint, Constraints
 from scripts.drawer import draw
+import numpy as np
 
 
 class Cube(BenchmarkModel):
@@ -18,7 +19,7 @@ class Cube(BenchmarkModel):
                                                     value=it * j + it * d + self.L - self.L * bj)])
                 for it in self.variables])
 
-        self.bounds = [self.bounds(i=ii, d=d) for ii in self.variables]
+        self.bounds = [self._bounds(i=ii, d=d) for ii in self.variables]
 
     def generate_points_from_range(self):
         df = self.generate_df()
@@ -36,3 +37,34 @@ class Cube(BenchmarkModel):
             if not constraints[index].validate(xi):
                 return False
         return True
+
+    def optimal_bounding_sphere(self):
+        #FIXME: Add handling for k
+        k = self.k - 1
+        w = list()
+        for i, constraints in enumerate(self.constraint_sets[k]):
+            for j, constraint in enumerate(constraints.constraints):
+                w0 = np.zeros(self.i)
+                w0[i] = 1 / constraint.value if constraint._operator == Operator.gt else -1 / constraint.value
+                w.append(w0)
+        w = np.concatenate(w)
+        return w
+
+    def optimal_w0(self):
+        # FIXME: Add handling for k
+        k = self.k - 1
+        w = list()
+        for constraints in self.constraint_sets[k]:
+            for j, constraint in enumerate(constraints.constraints):
+                w0 = 1 if constraint._operator == Operator.gt else -constraint.value
+                w.append(w0)
+        w = np.array(w)
+        return w
+
+    def optimal_n_constraints(self):
+        return 2 * self.i
+
+
+# cube = Cube(i=2, d=2.7)
+# sphere = cube.optimal_bounding_sphere()
+# optimal_w0 = cube.optimal_w0()

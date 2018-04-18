@@ -59,3 +59,38 @@ class Simplex(BenchmarkModel):
     @staticmethod
     def constraint2(xi, xj):
         return Simplex.cot_pi_12(xj) - Simplex.tan_pi_12(xi)
+
+    def optimal_bounding_sphere(self):
+        # #FIXME: Add handling for k
+        k = self.k - 1
+        w = list()
+        for i, j in zip(range(self.i), range(1, self.i)):
+            wi = np.repeat(np.inf, self.i)
+            wj = wi
+
+            wi[i] = - Simplex.tan_pi_12(1)
+            wi[j] = Simplex.cot_pi_12(1)
+
+            wj[i] = Simplex.cot_pi_12(1)
+            wj[j] = - Simplex.tan_pi_12(1)
+
+            w.append(wi)
+            w.append(wj)
+        w.append(np.array(self.d))
+        w = np.concatenate(w)
+        w = 1 / w
+        return w
+
+    def optimal_w0(self):
+        # # FIXME: Add handling for k
+        # k = self.k - 1
+        return np.append(np.zeros(self.optimal_n_constraints() - 1), 1)
+
+    def optimal_n_constraints(self):
+        return 2 * (self.i - 1) + 1
+
+
+cube = Simplex(i=3, d=2.7)
+sphere = cube.optimal_bounding_sphere()
+optimal_w0 = cube.optimal_w0()
+n = cube.optimal_n_constraints()
