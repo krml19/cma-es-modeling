@@ -5,6 +5,7 @@ from sklearn.preprocessing import StandardScaler
 from scripts.utils.sampler import bounding_sphere
 from scripts.benchmarks.cube import Cube
 from scripts.benchmarks.simplex import Simplex
+from scripts.benchmarks.ball import Ball
 
 from scripts.drawer import draw
 from scripts.utils.logger import Logger
@@ -12,10 +13,26 @@ from scripts.utils.logger import Logger
 log = Logger(name='cma-es')
 
 
+def benchmark_ball_objective_function(X: np.ndarray, w: np.ndarray, w0: np.ndarray) -> np.ndarray:
+    dim = X.shape[1]
+    d: float = 2.7
+    ii = np.arange(1, dim + 1)
+    X = ((X - ii) ** 2).sum(axis=1)
+    X: np.ndarray = X <= np.repeat(d, dim).prod()
+    return X
+
+
+def satisfies_constraints(X: np.ndarray, w: np.ndarray, w0: np.ndarray) -> np.ndarray:
+    x = np.matmul(X, w)
+    x = x <= np.sign(w0)
+    return x.prod(axis=1)
+
+
 class CMAESAlgorithm:
 
     def __init__(self, train_X: np.ndarray, valid_X: np.ndarray, w0, n_constraints: int, sigma0: float,
-                 scaler: [StandardScaler, None], model_type: str, seed: int=77665, margin: float = 2.0, x0: np.ndarray = None):
+                 scaler: [StandardScaler, None], model_type: str, seed: int=77665, margin: float = 2.0,
+                 x0: np.ndarray = None, objective_func: callable=satisfies_constraints):
         assert train_X.shape[1] == valid_X.shape[1]
         assert len(w0) == n_constraints
 
@@ -31,6 +48,8 @@ class CMAESAlgorithm:
         self.seed = seed
         self.model_type = model_type
         self.margin = margin
+        self.objective_func = objective_func
+
         if scaler is not None:
             self.scaler.fit(train_X)
             self.train_X = self.scaler.transform(train_X)
@@ -41,19 +60,12 @@ class CMAESAlgorithm:
         w0 = w[-1:]
         w = w[:-1]
 
-        def _objective_function_helper(X):
-            x = np.matmul(X, w)
-            x = x <= np.sign(w0)
-            _len = x.shape[0]
-            _sum = x.prod(axis=1).sum()
-            return _len, _sum
-
         # recall
-        card_b, tp = _objective_function_helper(self.train_X)
+        card_b, tp = self.train_X.shape[0], self.objective_func(self.train_X, w, w0).sum()
         recall = tp / card_b
 
         # p
-        card_p, p = _objective_function_helper(self.valid_X)
+        card_p, p = self.valid_X.shape[0], self.objective_func(self.valid_X, w, w0).sum()
 
         # p_y
         pr_y = p / card_p
@@ -105,20 +117,15 @@ class CMAESAlgorithm:
         w0 = w[-1:]
         w = w[:-1]
 
-        def __get_valid_points(X: np.ndarray):
-            x = np.matmul(X, w)
-            x = x <= np.sign(w0)
-            x = x.prod(axis=1)
-            return pd.Series(data=x, name='valid')
-
         names = ['x_{}'.format(x) for x in np.arange(self.valid_X.shape[1])]
         data = self.valid_X if self.scaler is None else self.scaler.inverse_transform(self.valid_X)
 
         valid = pd.DataFrame(data=data, columns=names)
-        valid['valid'] = __get_valid_points(self.valid_X)
+        valid['valid'] = pd.Series(data=self.objective_func(self.valid_X, w, w0), name='valid')
+
         train = self.train_X if self.scaler is None else self.scaler.inverse_transform(self.train_X)
         train = pd.DataFrame(data=train, columns=names)
-        train['valid'] = __get_valid_points(self.train_X)
+        train['valid'] = pd.Series(data=self.objective_func(self.train_X, w, w0), name='valid')
 
         if valid.shape[1] == 3:
             draw.draw2dmodel(df=valid, train=train, constraints=np.split(w, self.n_constraints, axis=1), title=title, model=self.model_type)
@@ -130,7 +137,7 @@ class CMAESAlgorithm:
 
 def data_sets(model: str):
     # load train data
-    _train_X = pd.read_csv('data/train_1e5/{}.csv'.format(model), nrows=int(1e5))
+    _train_X = pd.read_csv('data/train/{}.csv'.format(model), nrows=int(1e5))
     _train_X = _train_X.values
 
     # load valid data
@@ -141,11 +148,11 @@ def data_sets(model: str):
 
 
 # load data
-model_type = 'simplex3_0'
+model_type = 'ball2_0'
 train_X, valid_X = data_sets(model_type)
 
 # # run algorithm
-model = Simplex(i=3)
+model = Ball(i=2)
 x0: np.ndarray = model.optimal_bounding_sphere()
 w0: np.ndarray = model.optimal_w0()
 n = model.optimal_n_constraints()
@@ -157,5 +164,5 @@ scaler = None
 # scaler = StandardScaler()
 
 algorithm = CMAESAlgorithm(train_X=train_X, valid_X=valid_X, n_constraints=n, w0=w0, sigma0=1, model_type=model_type,
-                           scaler=scaler, margin=1, x0=x0)
+                           scaler=scaler, margin=1, x0=x0, objective_func=benchmark_ball_objective_function)
 algorithm.cma_es()

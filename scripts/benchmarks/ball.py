@@ -33,3 +33,18 @@ class Ball(BenchmarkModel):
         draw.draw2d(df=df, selected=[1, 0])
         draw.draw3d(df=df, selected=[0, 1, 2])
         self.info(df=df)
+
+    def optimal_bounding_sphere(self):
+        #FIXME: Add handling for k
+        # It has no effect
+        return np.array([1, 2, 3, 4])
+
+    def optimal_w0(self):
+        # FIXME: Add handling for k
+        # It has no effect
+        return np.array([1, 2])
+
+    def optimal_n_constraints(self):
+        # FIXME: Add handling for k
+        # It has no effect
+        return 2
