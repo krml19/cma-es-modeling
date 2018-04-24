@@ -2,10 +2,11 @@ import cma
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+from functools import reduce
 
 from scripts.benchmarks.ball import Ball
 from scripts.drawer import draw
-from scripts.utils.experimentdatabase import Database
+from scripts.utils.experimentdatabase import Database, DatabaseException
 from scripts.utils.logger import Logger
 from scripts.utils.sampler import bounding_sphere
 from scripts.utils.clustering import xmeans_clustering
@@ -26,6 +27,10 @@ def satisfies_constraints(X: np.ndarray, w: np.ndarray, w0: np.ndarray) -> np.nd
     x = np.matmul(X, w)
     x = x <= np.sign(w0)
     return x.prod(axis=1)
+
+
+def to_str(w: [list, np.ndarray]):
+    return reduce((lambda x, y: str(x) + ' ' + str(y)), w)
 
 
 class CMAESAlgorithm:
@@ -58,7 +63,7 @@ class CMAESAlgorithm:
         if clustering:
             self.clusters = [self.__train_X[x] for x in xmeans_clustering(self.__train_X)]
         else:
-            self.clusters = self.__train_X
+            self.clusters = [self.__train_X]
 
     def __objective_function(self, w):
         w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
@@ -141,7 +146,15 @@ class CMAESAlgorithm:
         # es.plot()
         return es
 
-    def cma_es(self, save_experiment=True):
+    def split_w(self, w, split_w=False):
+        w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
+        w0 = w[-1:]
+        w = w[:-1]
+        if split_w:
+            w = np.split(w, self.__n_constraints, axis=1)
+        return np.concatenate(w).flatten(), np.concatenate(w0)
+
+    def cma_es(self):
         _n = len(self.clusters)
         results = list()
 
@@ -152,7 +165,37 @@ class CMAESAlgorithm:
             results.append(cma_es)
             log.debug("Finished analyzing cluster: {}/{}".format(i, _n))
 
+        database = Database(database_filename='experiments.sqlite')
+        experiment = database.new_experiment()
 
+        try:
+            experiment['seed'] = self.__seed
+            experiment['n_constraints'] = self.__n_constraints
+            experiment['clusters'] = len(self.clusters)
+            experiment['dimensions'] = self.__dimensions
+            experiment['margin'] = self.__margin
+            experiment['standardized'] = self.__scaler is not None
+
+            f = 0
+            for i, es in enumerate(results):
+                es: cma.CMAEvolutionStrategy = es
+
+                W_start = self.split_w(es.x0, split_w=True)
+                W = self.split_w(es.best.x, split_w=True)
+
+                cluster = experiment.new_child_data_set('cluster_{}'.format(i))
+                cluster['w_start'] = to_str(W_start[0])
+                cluster['w0_start'] = to_str(W_start[1])
+                cluster['w'] = to_str(W[0])
+                cluster['w0'] = to_str(W[1])
+                cluster['f'] = es.best.f
+                f += es.best.f
+
+            experiment['f'] = f
+        except Exception as e:
+            experiment['error'] = e
+        finally:
+            experiment.save()
 
     def __draw_results(self, w, title=None):
         w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
@@ -206,17 +249,5 @@ scaler = None
 # scaler = StandardScaler()
 
 algorithm = CMAESAlgorithm(train_X=train_X, valid_X=valid_X, n_constraints=n, w0=w0, sigma0=1, model_type=model_type,
-                           scaler=scaler, margin=1, x0=x0, objective_func=benchmark_ball_objective_function, clustering=True)
+                           scaler=scaler, margin=1, x0=x0, objective_func=benchmark_ball_objective_function, clustering=False)
 algorithm.cma_es()
-
-
-database = Database(database_filename='experiments.sqlite')
-experiment = database.new_experiment()
-
-try:
-    constraints = experiment.new_child_data_set('constraints')
-    constraints['w'] = 'a'
-except ValueError as e:
-    experiment['error'] = e
-finally:
-    experiment.save()

@@ -2,7 +2,6 @@ from pyclustering.cluster import cluster_visualizer
 from pyclustering.cluster.xmeans import xmeans, splitting_type
 
 from pyclustering.utils import timedcall
-import pandas as pd
 import numpy as np
 from scripts.utils.logger import Logger
 
