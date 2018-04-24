@@ -2,13 +2,13 @@ import cma
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
-from scripts.utils.sampler import bounding_sphere
-from scripts.benchmarks.cube import Cube
-from scripts.benchmarks.simplex import Simplex
-from scripts.benchmarks.ball import Ball
 
+from scripts.benchmarks.ball import Ball
 from scripts.drawer import draw
+from scripts.utils.experimentdatabase import Database
 from scripts.utils.logger import Logger
+from scripts.utils.sampler import bounding_sphere
+from scripts.utils.clustering import xmeans_clustering
 
 log = Logger(name='cma-es')
 
@@ -32,40 +32,45 @@ class CMAESAlgorithm:
 
     def __init__(self, train_X: np.ndarray, valid_X: np.ndarray, w0, n_constraints: int, sigma0: float,
                  scaler: [StandardScaler, None], model_type: str, seed: int=77665, margin: float = 2.0,
-                 x0: np.ndarray = None, objective_func: callable=satisfies_constraints):
+                 x0: np.ndarray = None, objective_func: callable=satisfies_constraints, clustering: bool=False):
         assert train_X.shape[1] == valid_X.shape[1]
         assert len(w0) == n_constraints
 
-        self.w0 = w0
-        self.x0 = x0
-        self.train_X = train_X
-        self.valid_X = valid_X
-        self.dimensions = train_X.shape[1]
-        self.n_constraints = n_constraints
-        self.sigma0 = sigma0
-        self.es = None
-        self.scaler = scaler
-        self.seed = seed
-        self.model_type = model_type
-        self.margin = margin
-        self.objective_func = objective_func
+        self.__w0 = w0
+        self.__x0 = x0
+        self.__train_X = train_X
+        self.__valid_X = valid_X
+        self.__dimensions = train_X.shape[1]
+        self.__n_constraints = n_constraints
+        self.__sigma0 = sigma0
+        self.__scaler = scaler
+        self.__seed = seed
+        self.__model_type = model_type
+        self.__margin = margin
+        self.__objective_func = objective_func
 
+        # FIXME: Check if validation set should be scaled only once
         if scaler is not None:
-            self.scaler.fit(train_X)
-            self.train_X = self.scaler.transform(train_X)
-            self.valid_X = self.scaler.transform(valid_X)
+            self.__scaler.fit(train_X)
+            self.__train_X = self.__scaler.transform(train_X)
+            self.__valid_X = self.__scaler.transform(valid_X)
 
-    def objective_function(self, w):
-        w = np.reshape(w, newshape=(self.n_constraints, -1)).T
+        if clustering:
+            self.clusters = [self.__train_X[x] for x in xmeans_clustering(self.__train_X)]
+        else:
+            self.clusters = self.__train_X
+
+    def __objective_function(self, w):
+        w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
         w0 = w[-1:]
         w = w[:-1]
 
         # recall
-        card_b, tp = self.train_X.shape[0], self.objective_func(self.train_X, w, w0).sum()
+        card_b, tp = self.__train_X.shape[0], self.__objective_func(self.__train_X, w, w0).sum()
         recall = tp / card_b
 
         # p
-        card_p, p = self.valid_X.shape[0], self.objective_func(self.valid_X, w, w0).sum()
+        card_p, p = self.__valid_X.shape[0], self.__objective_func(self.__valid_X, w, w0).sum()
 
         # p_y
         pr_y = p / card_p
@@ -77,30 +82,54 @@ class CMAESAlgorithm:
         log.info("tp: {},\trecall: {},\tp: {},\t pr_y: {},\t\tf: {}".format(tp, p, recall, pr_y, f))
         return f
 
+    def __confusion_matrix(self, w):
+        w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
+        w0 = w[-1:]
+        w = w[:-1]
+
+        # recall
+        card_b = self.__train_X.shape[0]
+        tp = self.__objective_func(self.__train_X, w, w0).sum()
+        tn = card_b - tp
+        recall = tp / card_b
+
+        # p
+        card_p, p = self.__valid_X.shape[0], self.__objective_func(self.__valid_X, w, w0).sum()
+
+        # p_y
+        pr_y = p / card_p
+        pr_y = max(pr_y, 1e-6)  # avoid division by 0
+
+        # f
+        f = (recall ** 2) / pr_y
+        f = -f
+        log.info("tp: {},\trecall: {},\tp: {},\t pr_y: {},\t\tf: {}".format(tp, p, recall, pr_y, f))
+        return tp
+
     def __expand_initial_w(self, x0: np.ndarray):
-        x0 = np.split(x0, self.n_constraints)
-        w0 = self.w0
+        x0 = np.split(x0, self.__n_constraints)
+        w0 = self.__w0
         _x0 = list()
         for xi0, wi0 in zip(x0, w0):
             _x0.append(np.append(xi0, wi0))
         return np.concatenate(_x0)
 
-    def cma_es(self):
-        if self.x0 is None:
-            x0: np.ndarray = bounding_sphere(n=self.n_constraints, train_data_set=self.train_X, dim=self.dimensions, margin=self.margin)
+    def __cma_es(self):
+        if self.__x0 is None:
+            x0: np.ndarray = bounding_sphere(n=self.__n_constraints, train_data_set=self.__train_X, dim=self.__dimensions, margin=self.__margin)
         else:
-            x0 = self.x0
+            x0 = self.__x0
 
         x0 = self.__expand_initial_w(x0=x0)
-        f = self.objective_function(np.array(x0))
-        self.draw_results(np.array(x0), title='Initial solution: {}'.format(f))
+        f = self.__objective_function(np.array(x0))
+        self.__draw_results(np.array(x0), title='Initial solution: {}'.format(f))
 
-        es = cma.CMAEvolutionStrategy(x0=x0, sigma0=self.sigma0, inopts={'seed': self.seed, 'maxiter': int(1e4)})
+        es = cma.CMAEvolutionStrategy(x0=x0, sigma0=self.__sigma0, inopts={'seed': self.__seed, 'maxiter': int(1e4)})
 
         # iterate until termination
         while not es.stop():
             W = es.ask()
-            es.tell(W, [self.objective_function(w) for w in W])
+            es.tell(W, [self.__objective_function(w) for w in W])
             es.logger.add()
 
             es.disp()  # by default sparse, see option verb_disp
@@ -108,29 +137,42 @@ class CMAESAlgorithm:
             log.debug(es.result)
 
         log.info("Best: {}, w: {}".format(es.best.f, es.best.x))
-        self.draw_results(es.best.x, title='Best solution: {}'.format(es.best.f))
+        self.__draw_results(es.best.x, title='Best solution: {}'.format(es.best.f))
         # es.plot()
-        self.es = es
+        return es
 
-    def draw_results(self, w, title=None):
-        w = np.reshape(w, newshape=(self.n_constraints, -1)).T
+    def cma_es(self, save_experiment=True):
+        _n = len(self.clusters)
+        results = list()
+
+        for i, cluster in enumerate(self.clusters, start=1):
+            log.debug("Started analyzing cluster: {}/{}".format(i, _n))
+            self.__train_X = cluster
+            cma_es = self.__cma_es()
+            results.append(cma_es)
+            log.debug("Finished analyzing cluster: {}/{}".format(i, _n))
+
+
+
+    def __draw_results(self, w, title=None):
+        w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
         w0 = w[-1:]
         w = w[:-1]
 
-        names = ['x_{}'.format(x) for x in np.arange(self.valid_X.shape[1])]
-        data = self.valid_X if self.scaler is None else self.scaler.inverse_transform(self.valid_X)
+        names = ['x_{}'.format(x) for x in np.arange(self.__valid_X.shape[1])]
+        data = self.__valid_X if self.__scaler is None else self.__scaler.inverse_transform(self.__valid_X)
 
         valid = pd.DataFrame(data=data, columns=names)
-        valid['valid'] = pd.Series(data=self.objective_func(self.valid_X, w, w0), name='valid')
+        valid['valid'] = pd.Series(data=self.__objective_func(self.__valid_X, w, w0), name='valid')
 
-        train = self.train_X if self.scaler is None else self.scaler.inverse_transform(self.train_X)
+        train = self.__train_X if self.__scaler is None else self.__scaler.inverse_transform(self.__train_X)
         train = pd.DataFrame(data=train, columns=names)
-        train['valid'] = pd.Series(data=self.objective_func(self.train_X, w, w0), name='valid')
+        train['valid'] = pd.Series(data=self.__objective_func(self.__train_X, w, w0), name='valid')
 
         if valid.shape[1] == 3:
-            draw.draw2dmodel(df=valid, train=train, constraints=np.split(w, self.n_constraints, axis=1), title=title, model=self.model_type)
+            draw.draw2dmodel(df=valid, train=train, constraints=np.split(w, self.__n_constraints, axis=1), title=title, model=self.__model_type)
         elif valid.shape[1] == 4:
-            draw.draw3dmodel(df=valid, train=train, constraints=np.split(w, self.n_constraints, axis=1), title=title, model=self.model_type)
+            draw.draw3dmodel(df=valid, train=train, constraints=np.split(w, self.__n_constraints, axis=1), title=title, model=self.__model_type)
         else:
             pass
 
@@ -164,5 +206,17 @@ scaler = None
 # scaler = StandardScaler()
 
 algorithm = CMAESAlgorithm(train_X=train_X, valid_X=valid_X, n_constraints=n, w0=w0, sigma0=1, model_type=model_type,
-                           scaler=scaler, margin=1, x0=x0, objective_func=benchmark_ball_objective_function)
+                           scaler=scaler, margin=1, x0=x0, objective_func=benchmark_ball_objective_function, clustering=True)
 algorithm.cma_es()
+
+
+database = Database(database_filename='experiments.sqlite')
+experiment = database.new_experiment()
+
+try:
+    constraints = experiment.new_child_data_set('constraints')
+    constraints['w'] = 'a'
+except ValueError as e:
+    experiment['error'] = e
+finally:
+    experiment.save()

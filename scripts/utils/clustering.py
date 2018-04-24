@@ -7,6 +7,11 @@ import numpy as np
 from scripts.utils.logger import Logger
 
 
+'''
+Example usage
+data: np.ndarray = pd.read_csv('data/train/simplex3_0.csv', nrows=int(1e3)).values
+clusters = xmeans_clustering(data=data)
+'''
 def xmeans_clustering(data: np.ndarray, initial_centers: np.ndarray = None, kmax: int = 20, tolerance: float = 0.025,
                       criterion: enumerate = splitting_type.BAYESIAN_INFORMATION_CRITERION, ccore: bool = True,
                       logger=Logger(name='clustering'),
@@ -36,7 +41,3 @@ def xmeans_clustering(data: np.ndarray, initial_centers: np.ndarray = None, kmax
         visualizer.show()
 
     return clusters
-
-
-data: np.ndarray = pd.read_csv('data/train/simplex3_0.csv', nrows=int(1e3)).values
-clusters = xmeans_clustering(data=data)
