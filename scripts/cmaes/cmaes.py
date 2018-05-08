@@ -6,7 +6,7 @@ from functools import reduce
 
 from scripts.benchmarks.ball import Ball
 from scripts.drawer import draw
-from scripts.utils.experimentdatabase import Database, DatabaseException
+from scripts.utils.experimentdatabase import Database
 from scripts.utils.logger import Logger
 from scripts.utils.sampler import bounding_sphere
 from scripts.utils.clustering import xmeans_clustering
@@ -53,6 +53,7 @@ class CMAESAlgorithm:
         self.__model_type = model_type
         self.__margin = margin
         self.__objective_func = objective_func
+        self.__clustering = clustering
 
         # FIXME: Check if validation set should be scaled only once
         if scaler is not None:
@@ -88,6 +89,7 @@ class CMAESAlgorithm:
         return f
 
     def __confusion_matrix(self, w):
+        # TODO: tn, fn, fp
         w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
         w0 = w[-1:]
         w = w[:-1]
@@ -172,9 +174,11 @@ class CMAESAlgorithm:
             experiment['seed'] = self.__seed
             experiment['n_constraints'] = self.__n_constraints
             experiment['clusters'] = len(self.clusters)
+            experiment['clustering'] = self.__clustering
             experiment['dimensions'] = self.__dimensions
             experiment['margin'] = self.__margin
             experiment['standardized'] = self.__scaler is not None
+            experiment['type'] = self.__model_type
 
             f = 0
             for i, es in enumerate(results):

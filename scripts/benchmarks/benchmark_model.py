@@ -7,7 +7,7 @@ from scripts.utils.logger import Logger
 
 class BenchmarkModel:
 
-    def __init__(self, i, d=2.7, rows=1000, L=1e10, name='base-model', B=list([1]), seed=404):
+    def __init__(self, i, d=2.7, rows=1000, L=1e10, name='base-model', B=list([0, 1]), seed=404):
         self.variables = np.arange(1, i + 1)
         self.i = i
         self.d = d * np.ones(i)
