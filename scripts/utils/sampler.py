@@ -3,15 +3,17 @@ import itertools
 import random
 
 
-def samples(bounds, rows, cols=1, seed=404):
-    np.random.seed(seed)
-    return np.matrix(
-        [np.random.uniform(low=low, high=high, size=(rows, cols)).flatten() for low, high in bounds])
+class Sampler:
 
+    def __init__(self, seed: int = 404):
+        np.random.seed(seed)
 
-def uniform_samples(low, high, size, seed=404):
-    np.random.seed(seed)
-    return np.random.uniform(low=low, high=high, size=size)
+    def samples(self, bounds, rows, cols=1):
+        return np.matrix(
+            [np.random.uniform(low=low, high=high, size=(rows, cols)).flatten() for low, high in bounds])
+
+    def uniform_samples(self, low, high, size):
+        return np.random.uniform(low=low, high=high, size=size)
 
 
 def ct(arr, r):

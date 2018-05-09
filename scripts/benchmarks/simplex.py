@@ -10,8 +10,8 @@ class Simplex(BenchmarkModel):
     def _bounds(self, i, d):
         return -1, 2 * self.k + d
 
-    def __init__(self, i, d=2.7, rows=1000):
-        super().__init__(i=i, d=d, rows=rows, name='simplex')
+    def __init__(self, i, d=2.7, B=list([1, 1]), train_rows=5000, test_rows=int(1e5)):
+        super().__init__(i=i, d=d, train_rows=train_rows, name='simplex', test_rows=test_rows, B=B)
 
         self.constraint_sets = [
             Constraints(constraints=[Constraint(_operator=Operator.lt, value=2 * j - 2 - self.L * (1 - bj)),
@@ -22,7 +22,7 @@ class Simplex(BenchmarkModel):
         self.bounds = [self._bounds(i=ii, d=d) for ii in self.variables]
 
     def generate_points_from_range(self):
-        df = self.generate_df()
+        df = self.generate_train_dataset()
         draw.draw2d(df=df, selected=[1, 0])
         draw.draw3d(df=df, selected=[0, 1, 2])
         self.info(df=df)
@@ -59,38 +59,3 @@ class Simplex(BenchmarkModel):
     @staticmethod
     def constraint2(xi, xj):
         return Simplex.cot_pi_12(xj) - Simplex.tan_pi_12(xi)
-
-    def optimal_bounding_sphere(self):
-        # #FIXME: Add handling for k
-        k = self.k - 1
-        w = list()
-        for i, j in zip(range(self.i), range(1, self.i)):
-            wi = np.repeat(np.inf, self.i)
-            wj = wi
-
-            wi[i] = - Simplex.tan_pi_12(1)
-            wi[j] = Simplex.cot_pi_12(1)
-
-            wj[i] = Simplex.cot_pi_12(1)
-            wj[j] = - Simplex.tan_pi_12(1)
-
-            w.append(wi)
-            w.append(wj)
-        w.append(np.array(self.d))
-        w = np.concatenate(w)
-        w = 1 / w
-        return w
-
-    def optimal_w0(self):
-        # # FIXME: Add handling for k
-        # k = self.k - 1
-        return np.append(np.zeros(self.optimal_n_constraints() - 1), 1)
-
-    def optimal_n_constraints(self):
-        return 2 * (self.i - 1) + 1
-
-
-cube = Simplex(i=3, d=2.7)
-sphere = cube.optimal_bounding_sphere()
-optimal_w0 = cube.optimal_w0()
-n = cube.optimal_n_constraints()

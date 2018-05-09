@@ -73,7 +73,7 @@ class DataSet(CaseInsensitiveDict):
             if self.__parent is not None:
                 parent_id = self.__parent.id
                 if parent_id == -1:
-                    self.__parent.save(False)  # gets id from database
+                    self.__parent.__save(False)  # gets id from database
                     parent_id = self.__parent.id
                 assert parent_id >= 0
                 self["parent"] = parent_id
@@ -93,7 +93,7 @@ class DataSet(CaseInsensitiveDict):
             # save my children
             if with_children:
                 for child in self.__children:
-                    child.save(True)
+                    child.__save(True)
 
             self.__database.engine.commit()
         except Exception as ex:

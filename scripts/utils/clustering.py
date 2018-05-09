@@ -40,7 +40,3 @@ def xmeans_clustering(data: np.ndarray, initial_centers: np.ndarray = None, kmax
         visualizer.show()
 
     return clusters
-
-
-data: np.ndarray = pd.read_csv('data/train/ball2_seed_404_k_2_0.csv', nrows=int(1e3)).values
-clusters = xmeans_clustering(data=data)
