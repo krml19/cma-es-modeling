@@ -79,7 +79,8 @@ class BenchmarkModel:
         cols = self.variable_names(self.variables)
         samples = self.sampler.samples(self.bounds, rows=self.test_rows, cols=len(self.variables))
         df = pd.DataFrame(samples.T, columns=cols)
-
+        self.logger.debug('Generating validation columns')
+        df['valid'] = self.generate_valid_column(df)
         self.__save(df=df, path=fh.Paths.test.value)
         return df
 
@@ -89,7 +90,7 @@ class BenchmarkModel:
         self.generate_test_dataset()
 
     def filename(self) -> str:
-        return "{}{}_seed_{}_k_{}".format(self.name, self.i, self.seed, self.k)
+        return "{}_{}_{}".format(self.name, self.i, self.k)
 
     def benchmark_objective_function(self, X: np.ndarray, w: np.ndarray, w0: np.ndarray) -> np.ndarray:
         return np.apply_along_axis(lambda x: self.matches_constraints(x), 1, X)
