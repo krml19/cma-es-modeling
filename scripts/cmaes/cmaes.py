@@ -11,6 +11,8 @@ from scripts.utils.logger import Logger
 from scripts.utils.sampler import bounding_sphere
 from scripts.utils.clustering import xmeans_clustering
 from scripts.benchmarks.ball import Ball
+from scripts.benchmarks.cube import Cube
+from sklearn.metrics import confusion_matrix
 
 log = Logger(name='cma-es')
 
@@ -21,29 +23,30 @@ def to_str(w: [list, np.ndarray]):
 class CMAESAlgorithm:
 
     def __init__(self, w0, n_constraints: int, sigma0: float,
-                 scaler: [StandardScaler, None], data_model: DataModel, margin: float = 2.0,
-                 x0: np.ndarray = None, objective_func: [callable, None] = None, clustering: bool=False):
+                 scaler: [StandardScaler, None], data_model: DataModel, margin: float,
+                 x0: np.ndarray = None, satisfies_constraints: [callable, None] = None, clustering: bool=False):
         assert len(w0) == n_constraints
 
         self.__w0 = w0
         self.__x0 = x0
         self.__train_X = data_model.train_set()
         self.__valid_X = data_model.valid_set()
-        self.__test_X = data_model.test_set()
+        self.test_X, self.__test_Y = data_model.test_set()
         self.__dimensions = self.__train_X.shape[1]
         self.__n_constraints = n_constraints
         self.__sigma0 = sigma0
         self.__scaler = scaler
         self.__data_model = data_model
         self.__margin = margin
-        self.__objective_func = objective_func if objective_func is not None else self.satisfies_constraints
+        self.matches_constraints = satisfies_constraints if satisfies_constraints is not None else self.satisfies_constraints
         self.__clustering = clustering
+        self.__results = list()
 
         if scaler is not None:
             self.__scaler.fit(self.__train_X)
             self.__train_X = self.__scaler.transform(self.__train_X)
             self.__valid_X = self.__scaler.transform(self.__valid_X)
-            self.__test_X = self.__scaler.transform(self.__test_X)
+            self.test_X = self.__scaler.transform(self.test_X)
 
         if clustering:
             self.clusters = [self.__train_X[x] for x in xmeans_clustering(self.__train_X)]
@@ -61,11 +64,11 @@ class CMAESAlgorithm:
         w = w[:-1]
 
         # recall
-        card_b, tp = self.__train_X.shape[0], self.__objective_func(self.__train_X, w, w0).sum()
+        card_b, tp = self.__train_X.shape[0], self.matches_constraints(self.__train_X, w, w0).sum()
         recall = tp / card_b
 
         # p
-        card_p, p = self.__valid_X.shape[0], self.__objective_func(self.__valid_X, w, w0).sum()
+        card_p, p = self.__valid_X.shape[0], self.matches_constraints(self.__valid_X, w, w0).sum()
 
         # p_y
         pr_y = p / card_p
@@ -77,20 +80,31 @@ class CMAESAlgorithm:
         log.info("tp: {},\trecall: {},\tp: {},\t pr_y: {},\t\tf: {}".format(tp, p, recall, pr_y, f))
         return f
 
-    def __confusion_matrix(self, w):
-        # TODO: tn, fn, fp
-        w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
-        w0 = w[-1:]
-        w = w[:-1]
+    def best_results(self):
+        final_results = dict()
+        y_pred = np.ones(self.__test_Y.shape)
+        y_valid_pred = np.ones(self.__test_Y.shape)
 
-        # recall
-        card_b = self.__train_X.shape[0]
-        tp = self.__objective_func(self.__train_X, w, w0).sum()
-        tn = card_b - tp
+        for result in self.__results:
+            assert isinstance(result, cma.CMAEvolutionStrategy)
+            w = result.best.x
+            w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
+            w0 = w[-1:]
+            w = w[:-1]
+
+            y_pred = y_pred * self.matches_constraints(self.test_X, w, w0)
+            y_valid_pred = y_valid_pred * self.matches_constraints(self.__valid_X, w, w0)
+
+        # confusion matrix
+        y_true = self.__test_Y
+        tn, fp, fn, tp = confusion_matrix(y_true=y_true.astype(int), y_pred=y_pred.astype(int)).ravel()
+
+        # tp
+        card_b, tp = self.test_X.shape[0], y_pred.sum()
         recall = tp / card_b
 
         # p
-        card_p, p = self.__valid_X.shape[0], self.__objective_func(self.__valid_X, w, w0).sum()
+        card_p, p = self.__valid_X.shape[0], y_valid_pred.sum()
 
         # p_y
         pr_y = p / card_p
@@ -99,8 +113,14 @@ class CMAESAlgorithm:
         # f
         f = (recall ** 2) / pr_y
         f = -f
-        log.info("tp: {},\trecall: {},\tp: {},\t pr_y: {},\t\tf: {}".format(tp, p, recall, pr_y, f))
-        return tp
+
+        # final results
+        final_results['tn'] = tn
+        final_results['tp'] = tp
+        final_results['fp'] = fp
+        final_results['fn'] = fn
+        final_results['f'] = f
+        return final_results
 
     def __expand_initial_w(self, x0: np.ndarray):
         x0 = np.split(x0, self.__n_constraints)
@@ -145,52 +165,6 @@ class CMAESAlgorithm:
             w = np.split(w, self.__n_constraints, axis=1)
         return np.concatenate(w).flatten(), np.concatenate(w0)
 
-    def cma_es(self):
-        _n = len(self.clusters)
-        results = list()
-
-        for i, cluster in enumerate(self.clusters, start=1):
-            log.debug("Started analyzing cluster: {}/{}".format(i, _n))
-            self.__train_X = cluster
-            cma_es = self.__cma_es()
-            results.append(cma_es)
-            log.debug("Finished analyzing cluster: {}/{}".format(i, _n))
-
-        database = Database(database_filename='experiments.sqlite')
-        experiment = database.new_experiment()
-
-        try:
-            experiment['seed'] = self.__data_model.benchmark_model.seed
-            experiment['n_constraints'] = self.__n_constraints
-            experiment['clusters'] = len(self.clusters)
-            experiment['clustering'] = self.__clustering
-            experiment['margin'] = self.__margin
-            experiment['standardized'] = self.__scaler is not None
-            experiment['name'] = self.__data_model.benchmark_model.name
-            experiment['k'] = self.__data_model.benchmark_model.k
-            experiment['n'] = self.__dimensions
-
-            f = 0
-            for i, es in enumerate(results):
-                es: cma.CMAEvolutionStrategy = es
-
-                W_start = self.split_w(es.x0, split_w=True)
-                W = self.split_w(es.best.x, split_w=True)
-
-                cluster = experiment.new_child_data_set('cluster_{}'.format(i))
-                cluster['w_start'] = to_str(W_start[0])
-                cluster['w0_start'] = to_str(W_start[1])
-                cluster['w'] = to_str(W[0])
-                cluster['w0'] = to_str(W[1])
-                cluster['f'] = es.best.f
-                f += es.best.f
-
-            experiment['f'] = f
-        except Exception as e:
-            experiment['error'] = e
-        finally:
-            experiment.save()
-
     def __draw_results(self, w, title=None):
         if self.__valid_X.shape[1] > 4:
             return
@@ -203,11 +177,11 @@ class CMAESAlgorithm:
         data = self.__valid_X if self.__scaler is None else self.__scaler.inverse_transform(self.__valid_X)
 
         valid = pd.DataFrame(data=data, columns=names)
-        valid['valid'] = pd.Series(data=self.__objective_func(self.__valid_X, w, w0), name='valid')
+        valid['valid'] = pd.Series(data=self.matches_constraints(self.__valid_X, w, w0), name='valid')
 
         train = self.__train_X if self.__scaler is None else self.__scaler.inverse_transform(self.__train_X)
         train = pd.DataFrame(data=train, columns=names)
-        train['valid'] = pd.Series(data=self.__objective_func(self.__train_X, w, w0), name='valid')
+        train['valid'] = pd.Series(data=self.matches_constraints(self.__train_X, w, w0), name='valid')
 
         if valid.shape[1] == 3:
             draw.draw2dmodel(df=valid, train=train, constraints=np.split(w, self.__n_constraints, axis=1), title=title, model=self.__data_model.benchmark_model.name)
@@ -216,12 +190,86 @@ class CMAESAlgorithm:
         else:
             pass
 
+    def experiment(self):
+        if self.check_if_experiment_already_exists():
+            log.debug("Experiment already exists. Skipping")
+            return
+
+        _n = len(self.clusters)
+
+        if self.__clustering:
+            for i, cluster in enumerate(self.clusters, start=1):
+                log.debug("Started analyzing cluster: {}/{}".format(i, _n))
+                self.__train_X = cluster
+                cma_es = self.__cma_es()
+                self.__results.append(cma_es)
+                log.debug("Finished analyzing cluster: {}/{}".format(i, _n))
+        else:
+            log.debug("Started analyzing train dataset")
+            cma_es = self.__cma_es()
+            self.__results.append(cma_es)
+            log.debug("Finished analyzing train dataset")
+
+        database = Database(database_filename='experiments.sqlite')
+        experiment = database.new_experiment()
+
+        try:
+            experiment['seed'] = self.__data_model.benchmark_model.seed
+            experiment['n_constraints'] = self.__n_constraints
+            experiment['clusters'] = len(self.clusters)
+            experiment['clustering'] = self.__clustering
+            experiment['margin'] = self.__margin
+            experiment['standardized'] = self.__scaler is not None
+            experiment['sigma'] = self.__sigma0
+            experiment['name'] = self.__data_model.benchmark_model.name
+            experiment['k'] = self.__data_model.benchmark_model.k
+            experiment['n'] = self.__dimensions
+            final_results = self.best_results()
+            experiment['tp'] = int(final_results['tp'])
+            experiment['tn'] = int(final_results['tn'])
+            experiment['fp'] = int(final_results['fp'])
+            experiment['fn'] = int(final_results['fn'])
+            experiment['f'] = final_results['f']
+
+            for i, es in enumerate(self.__results):
+                es: cma.CMAEvolutionStrategy = es
+
+                W_start = self.split_w(es.x0, split_w=True)
+                W = self.split_w(es.best.x, split_w=True)
+
+                cluster = experiment.new_child_data_set('cluster_{}'.format(i))
+                cluster['w_start'] = to_str(W_start[0])
+                cluster['w0_start'] = to_str(W_start[1])
+                cluster['w'] = to_str(W[0])
+                cluster['w0'] = to_str(W[1])
+                cluster['f'] = es.best.f
+
+        except Exception as e:
+            experiment['error'] = e
+        finally:
+            experiment.save()
+
+    @property
+    def query(self):
+        return ("select * from experiments where n_constraints=? and clusters=? and margin=? and sigma=? and k=? and n=? and seed=? and name=? and clustering=? and standardized=?",
+                (self.__n_constraints, len(self.clusters), self.__margin, self.__sigma0, self.__data_model.benchmark_model.k,
+                 self.__data_model.benchmark_model.i, self.__data_model.benchmark_model.seed,
+                 self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None))
+
+    def check_if_experiment_already_exists(self) -> bool:
+        database = Database(database_filename='experiments.sqlite')
+        sql, parameters = self.query
+        cursor = database.engine.execute(sql=sql, parameters=parameters)
+        return len(cursor.fetchall()) > 0
+
+
+
 n = 4
 w0 = np.repeat(1, 4)
 x0 = None
 scaler = None
-model = DataModel(model=Ball(i=2, B=[1, 1]))
+model = DataModel(model=Ball(i=2, B=[1]))
 
 algorithm = CMAESAlgorithm(n_constraints=n, w0=w0, sigma0=1, data_model=model,
-                           scaler=scaler, margin=1, x0=x0, clustering=False, objective_func=model.benchmark_model.benchmark_objective_function)
-algorithm.cma_es()
+                           scaler=scaler, margin=1, x0=x0, clustering=False, satisfies_constraints=model.benchmark_model.benchmark_objective_function)
+algorithm.experiment()
