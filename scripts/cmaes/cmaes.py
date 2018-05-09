@@ -24,7 +24,7 @@ class CMAESAlgorithm:
 
     def __init__(self, w0, n_constraints: int, sigma0: float,
                  scaler: [StandardScaler, None], data_model: DataModel, margin: float,
-                 x0: np.ndarray = None, satisfies_constraints: [callable, None] = None, clustering: bool=False):
+                 x0: np.ndarray = None, satisfies_constraints: [callable, None] = None, clustering: bool=False, seed: int = 404):
         assert len(w0) == n_constraints
 
         self.__w0 = w0
@@ -41,6 +41,7 @@ class CMAESAlgorithm:
         self.matches_constraints = satisfies_constraints if satisfies_constraints is not None else self.satisfies_constraints
         self.__clustering = clustering
         self.__results = list()
+        self.__seed = seed
 
         if scaler is not None:
             self.__scaler.fit(self.__train_X)
@@ -140,7 +141,7 @@ class CMAESAlgorithm:
         f = self.__objective_function(np.array(x0))
         self.__draw_results(np.array(x0), title='Initial solution: {}'.format(f))
 
-        es = cma.CMAEvolutionStrategy(x0=x0, sigma0=self.__sigma0, inopts={'seed': self.__data_model.benchmark_model.seed, 'maxiter': int(1e4)})
+        es = cma.CMAEvolutionStrategy(x0=x0, sigma0=self.__sigma0, inopts={'seed': self.__seed, 'maxiter': int(1e4)})
 
         # iterate until termination
         while not es.stop():
@@ -271,5 +272,9 @@ scaler = None
 model = DataModel(model=Ball(i=2, B=[1]))
 
 algorithm = CMAESAlgorithm(n_constraints=n, w0=w0, sigma0=1, data_model=model,
-                           scaler=scaler, margin=1, x0=x0, clustering=False, satisfies_constraints=model.benchmark_model.benchmark_objective_function)
+                           scaler=scaler, margin=1, x0=x0, clustering=False,
+                           satisfies_constraints=model.benchmark_model.benchmark_objective_function)
 algorithm.experiment()
+
+args = dict(n_constraints=1, w0=w0, sigma0=1, data_model=model, scaler=scaler, margin=1, x0=x0, clustering=False,
+            satisfies_constraints=None)

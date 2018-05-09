@@ -10,8 +10,8 @@ class Simplex(BenchmarkModel):
     def _bounds(self, i, d):
         return -1, 2 * self.k + d
 
-    def __init__(self, i, d=2.7, B=list([1, 1]), train_rows=5000, test_rows=int(1e5)):
-        super().__init__(i=i, d=d, train_rows=train_rows, name='simplex', test_rows=test_rows, B=B)
+    def __init__(self, i, d=2.7, B=list([1, 1])):
+        super().__init__(i=i, d=d, name='simplex', B=B)
 
         self.constraint_sets = [
             Constraints(constraints=[Constraint(_operator=Operator.lt, value=2 * j - 2 - self.L * (1 - bj)),
@@ -20,12 +20,6 @@ class Simplex(BenchmarkModel):
             enumerate(self.B, start=1)]
 
         self.bounds = [self._bounds(i=ii, d=d) for ii in self.variables]
-
-    def generate_points_from_range(self):
-        df = self.generate_train_dataset()
-        draw.draw2d(df=df, selected=[1, 0])
-        draw.draw3d(df=df, selected=[0, 1, 2])
-        self.info(df=df)
 
     def matches_constraints(self, row):
         validation_result = [self._matches_constraints_set(constraints=constraints, row=row) for constraints in

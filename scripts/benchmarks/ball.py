@@ -9,8 +9,8 @@ class Ball(BenchmarkModel):
     def _bounds(self, i, d):
         return i - 2 * d, i + 2 * d + (2 * np.sqrt(6) * (self.k - 1) * d) / np.pi
 
-    def __init__(self, i, d=2.7, B=list([1, 1]), train_rows=5000, test_rows=int(1e5)):
-        super().__init__(i=i, d=d, train_rows=train_rows, name='ball', test_rows=test_rows, B=B)
+    def __init__(self, i, d=2.7, B=list([1, 1])):
+        super().__init__(i=i, d=d, name='ball', B=B)
 
         self.constraint_sets = [
             Constraints(constraints=[Constraint(_operator=Operator.gt, value=d * d + self.L * (1 - bj))]) for bj in
@@ -27,9 +27,3 @@ class Ball(BenchmarkModel):
         validation_result = [(x - i - (2 * np.sqrt(6) * j * self.d[i-1]) / (i * np.pi)) ** 2 for i, x in enumerate(row, start=1)]
         _sum = sum(validation_result)
         return constraint.validate(_sum)
-
-    def generate_points_from_range(self):
-        df = self.generate_train_dataset()
-        draw.draw2d(df=df, selected=[1, 0])
-        draw.draw3d(df=df, selected=[0, 1, 2])
-        self.info(df=df)

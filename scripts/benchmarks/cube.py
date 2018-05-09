@@ -9,8 +9,8 @@ class Cube(BenchmarkModel):
     def _bounds(self, i, d):
         return i - i * d * self.k, i + 2 * i * d * self.k
 
-    def __init__(self, i, d=2.7, B=list([1, 1]), train_rows=5000, test_rows=int(1e5)):
-        super().__init__(i=i, d=d, train_rows=train_rows, name='cube', test_rows=test_rows, B=B)
+    def __init__(self, i, d=2.7, B=list([1, 1])):
+        super().__init__(i=i, d=d, name='cube', B=B)
         self.constraint_sets = list()
         for j, bj in enumerate(self.B, start=1):
             self.constraint_sets.append([
@@ -20,13 +20,6 @@ class Cube(BenchmarkModel):
                 for it in self.variables])
 
         self.bounds = [self._bounds(i=ii, d=d) for ii in self.variables]
-
-    def generate_points_from_range(self):
-        df = self.generate_train_dataset()
-        draw.draw2d(df=df, selected=[1, 0])
-        draw.draw3d(df=df, selected=[0, 1, 2])
-
-        self.info(df=df)
 
     def matches_constraints(self, row):
         validation_result = [self.match(constraints, row) for constraints in self.constraint_sets]

@@ -9,9 +9,13 @@ import pandas as pd
 log = Logger(name='benchmarks')
 
 
-def generate_model(model_type: BenchmarkModel, i=3, d=2.7, B=[1]):
-    model = model_type(i=i, d=d, B=B)
+def generate_model(model_type: [Simplex, Cube, Ball], i, B):
+    model = model_type(i=i, B=B)
     model.generate_datasets()
 
-for model in [Cube, Ball]:
-    generate_model(model_type=model, i=2, B=[1])
+
+for model in [Cube, Ball, Simplex]:
+    # FIXME: change range
+    for n in range(5, 8):
+        for k in range(1, 3):
+            generate_model(model_type=model, i=n, B=k*[1])

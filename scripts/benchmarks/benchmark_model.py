@@ -1,6 +1,6 @@
 import numpy as np
 
-from scripts.utils.sampler import Sampler
+from scripts.utils import sampler
 import pandas as pd
 from scripts.csv import file_helper as fh
 from scripts.utils.logger import Logger
@@ -8,7 +8,7 @@ from scripts.utils.logger import Logger
 
 class BenchmarkModel:
 
-    def __init__(self, i, d=2.7, train_rows=5000, test_rows=int(1e5), L=1e10, name='base-model', B=list([1, 1]), seed=404):
+    def __init__(self, i, d=2.7, train_rows=500, test_rows=int(1e5), L=1e10, name='base-model', B=list([1, 1])):
         self.variables = np.arange(1, i + 1)
         self.i = i
         self.d = d * np.ones(i)
@@ -18,10 +18,8 @@ class BenchmarkModel:
         self.L = L
         self.B = B
         self.k = len(self.B)
-        self.seed = seed
         self.logger = Logger(name=name)
         self.bounds = None
-        self.sampler = Sampler(seed=seed)
 
     def variable_names(self, variables):
         return ["x_{}".format(i) for i in variables]
@@ -54,7 +52,7 @@ class BenchmarkModel:
     def __generate_train_subset(self):
         cols = self.variable_names(self.variables)
         self.logger.debug('Sampling points')
-        samples = self.sampler.samples(self.bounds, rows=self.train_rows, cols=len(self.variables))
+        samples = sampler.samples(self.bounds, rows=self.train_rows, cols=len(self.variables))
         self.logger.debug('Creating data frame')
         df = pd.DataFrame(samples.T, columns=cols)
         self.logger.debug('Generating validation columns')
@@ -69,7 +67,7 @@ class BenchmarkModel:
 
     def generate_validation_dataset(self):
         cols = self.variable_names(self.variables)
-        samples = self.sampler.samples(self.bounds, rows=self.test_rows, cols=len(self.variables))
+        samples = sampler.samples(self.bounds, rows=self.test_rows, cols=len(self.variables))
         df = pd.DataFrame(samples.T, columns=cols)
 
         self.__save(df=df, path=fh.Paths.valid.value)
@@ -77,7 +75,7 @@ class BenchmarkModel:
 
     def generate_test_dataset(self):
         cols = self.variable_names(self.variables)
-        samples = self.sampler.samples(self.bounds, rows=self.test_rows, cols=len(self.variables))
+        samples = sampler.samples(self.bounds, rows=self.test_rows, cols=len(self.variables))
         df = pd.DataFrame(samples.T, columns=cols)
         self.logger.debug('Generating validation columns')
         df['valid'] = self.generate_valid_column(df)
