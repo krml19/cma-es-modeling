@@ -3,10 +3,10 @@ import itertools
 import random
 
 
-def samples(bounds, rows, cols=1):
+def samples(bounds, rows):
     np.random.seed(seed=np.random.randint(int(1e4)))
     return np.matrix(
-        [np.random.uniform(low=low, high=high, size=(rows, cols)).flatten() for low, high in bounds])
+        [np.random.uniform(low=low, high=high, size=(rows, 1)).flatten() for low, high in bounds])
 
 
 def ct(arr, r):

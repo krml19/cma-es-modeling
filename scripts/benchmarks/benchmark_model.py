@@ -42,6 +42,7 @@ class BenchmarkModel:
 
         while df.shape[0] < self.train_rows:
             df = df.append(self.__generate_train_subset())
+            self.logger.debug("Current progress: {}/{}".format(len(df), self.train_rows))
 
         self.logger.debug('Removing invalid points and validation column')
         df = df.drop(['valid'], axis=1, errors='ignore')
@@ -52,7 +53,7 @@ class BenchmarkModel:
     def __generate_train_subset(self):
         cols = self.variable_names(self.variables)
         self.logger.debug('Sampling points')
-        samples = sampler.samples(self.bounds, rows=self.train_rows, cols=len(self.variables))
+        samples = sampler.samples(self.bounds, rows=self.test_rows)
         self.logger.debug('Creating data frame')
         df = pd.DataFrame(samples.T, columns=cols)
         self.logger.debug('Generating validation columns')
@@ -67,7 +68,7 @@ class BenchmarkModel:
 
     def generate_validation_dataset(self):
         cols = self.variable_names(self.variables)
-        samples = sampler.samples(self.bounds, rows=self.test_rows, cols=len(self.variables))
+        samples = sampler.samples(self.bounds, rows=self.test_rows)
         df = pd.DataFrame(samples.T, columns=cols)
 
         self.__save(df=df, path=fh.Paths.valid.value)
@@ -75,7 +76,7 @@ class BenchmarkModel:
 
     def generate_test_dataset(self):
         cols = self.variable_names(self.variables)
-        samples = sampler.samples(self.bounds, rows=self.test_rows, cols=len(self.variables))
+        samples = sampler.samples(self.bounds, rows=self.test_rows)
         df = pd.DataFrame(samples.T, columns=cols)
         self.logger.debug('Generating validation columns')
         df['valid'] = self.generate_valid_column(df)

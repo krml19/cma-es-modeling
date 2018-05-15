@@ -6,12 +6,10 @@ from functools import reduce
 
 from scripts.benchmarks.data_model import DataModel
 from scripts.drawer import draw
-from scripts.utils.experimentdatabase import Database
+from scripts.utils.experimentdatabase import Experiment
 from scripts.utils.logger import Logger
 from scripts.utils.sampler import bounding_sphere
 from scripts.utils.clustering import xmeans_clustering
-from scripts.benchmarks.ball import Ball
-from scripts.benchmarks.cube import Cube
 from sklearn.metrics import confusion_matrix
 
 log = Logger(name='cma-es')
@@ -191,11 +189,7 @@ class CMAESAlgorithm:
         else:
             pass
 
-    def experiment(self):
-        if self.check_if_experiment_already_exists():
-            log.debug("Experiment already exists. Skipping")
-            return
-
+    def experiment(self, experiment: Experiment):
         _n = len(self.clusters)
 
         if self.__clustering:
@@ -211,11 +205,8 @@ class CMAESAlgorithm:
             self.__results.append(cma_es)
             log.debug("Finished analyzing train dataset")
 
-        database = Database(database_filename='experiments.sqlite')
-        experiment = database.new_experiment()
-
         try:
-            experiment['seed'] = self.__data_model.benchmark_model.seed
+            experiment['seed'] = self.__seed
             experiment['n_constraints'] = self.__n_constraints
             experiment['clusters'] = len(self.clusters)
             experiment['clustering'] = self.__clustering
@@ -250,31 +241,23 @@ class CMAESAlgorithm:
         finally:
             experiment.save()
 
+
     @property
-    def query(self):
-        return ("select * from experiments where n_constraints=? and clusters=? and margin=? and sigma=? and k=? and n=? and seed=? and name=? and clustering=? and standardized=?",
-                (self.__n_constraints, len(self.clusters), self.__margin, self.__sigma0, self.__data_model.benchmark_model.k,
-                 self.__data_model.benchmark_model.i, self.__data_model.benchmark_model.seed,
-                 self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None))
+    def sql_params(self):
+        return (self.__n_constraints, len(self.clusters), self.__margin, self.__sigma0, self.__data_model.benchmark_model.k,
+                 self.__data_model.benchmark_model.i, self.__seed,
+                 self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
 
-    def check_if_experiment_already_exists(self) -> bool:
-        database = Database(database_filename='experiments.sqlite')
-        sql, parameters = self.query
-        cursor = database.engine.execute(sql=sql, parameters=parameters)
-        return len(cursor.fetchall()) > 0
-
-
-
-n = 4
-w0 = np.repeat(1, 4)
-x0 = None
-scaler = None
-model = DataModel(model=Ball(i=2, B=[1]))
-
-algorithm = CMAESAlgorithm(n_constraints=n, w0=w0, sigma0=1, data_model=model,
-                           scaler=scaler, margin=1, x0=x0, clustering=False,
-                           satisfies_constraints=model.benchmark_model.benchmark_objective_function)
-algorithm.experiment()
-
-args = dict(n_constraints=1, w0=w0, sigma0=1, data_model=model, scaler=scaler, margin=1, x0=x0, clustering=False,
-            satisfies_constraints=None)
+# n = 5
+# w0 = np.repeat(1, n)
+# x0 = None
+# scaler = None
+# model = DataModel(model=Ball(i=2, B=[1]))
+#
+# algorithm = CMAESAlgorithm(n_constraints=n, w0=w0, sigma0=1, data_model=model,
+#                            scaler=scaler, margin=1, x0=x0, clustering=False,
+#                            satisfies_constraints=model.benchmark_model.benchmark_objective_function)
+# algorithm.experiment()
+#
+# args = dict(n_constraints=1, w0=w0, sigma0=1, data_model=model, scaler=scaler, margin=1, x0=x0, clustering=False,
+#             satisfies_constraints=None)
