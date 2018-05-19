@@ -1,20 +1,29 @@
 from pyclustering.cluster import cluster_visualizer
 from pyclustering.cluster.xmeans import xmeans, splitting_type
-
 from pyclustering.utils import timedcall
+
 import numpy as np
 from scripts.utils.logger import Logger
-import pandas as pd
+from sklearn.cluster import KMeans
 
 '''
 Example usage
 data: np.ndarray = pd.read_csv('data/train/simplex3_0.csv', nrows=int(1e3)).values
 clusters = xmeans_clustering(data=data)
 '''
-def xmeans_clustering(data: np.ndarray, initial_centers: np.ndarray = None, kmax: int = 20, tolerance: float = 0.025,
+
+
+def xmeans_clustering(data: np.ndarray, kmin: [int, None] = 1, kmax: [int, None] = 20, tolerance: float = 0.025,
                       criterion: enumerate = splitting_type.BAYESIAN_INFORMATION_CRITERION, ccore: bool = True,
                       logger=Logger(name='clustering'),
                       visualize: bool = True) -> np.ndarray:
+
+    # Initial centers - KMeans algorithm
+    kmeans = KMeans(n_clusters=kmin)
+    kmeans.fit(data)
+    initial_centers = kmeans.cluster_centers_
+
+    # X-Means algorithm
     xmeans_instance = xmeans(data=data, initial_centers=initial_centers, kmax=kmax, tolerance=tolerance,
                              criterion=criterion, ccore=ccore)
     (ticks, _) = timedcall(xmeans_instance.process)

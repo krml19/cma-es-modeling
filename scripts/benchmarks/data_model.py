@@ -2,21 +2,29 @@ import numpy as np
 import pandas as pd
 
 from scripts.benchmarks.ball import Ball
+from scripts.benchmarks.cube import Cube
+from scripts.benchmarks.simplex import Simplex
 from scripts.benchmarks.benchmark_model import BenchmarkModel
 from scripts.csv.file_helper import Paths
 
 
 class DataModel:
+    def __init__(self, name, B, n):
 
-    def __init__(self, model: BenchmarkModel = Ball):
-        self.benchmark_model = model
+        self.benchmark_model = self.__get_model(name=name, B=B, n=n)
+
+    def __get_model(self, name, B, n) -> BenchmarkModel:
+        return {
+            'ball': Ball(i=n, B=B),
+            'cube': Cube(i=n, B=B),
+            'simplex': Simplex(i=n, B=B),
+        }[name]
 
     def __filename(self, path) -> str:
         return "{}{}.csv".format(path, self.benchmark_model.filename())
 
     def __get_dataset(self, filename):
-        #  FIXME: Remove `nrows` parameter
-        return pd.read_csv(filename, nrows=100).values
+        return pd.read_csv(filename).values
 
     def train_set(self) -> np.ndarray:
         return self.__get_dataset(self.__filename(Paths.train.value))

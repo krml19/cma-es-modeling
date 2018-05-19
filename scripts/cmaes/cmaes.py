@@ -6,11 +6,12 @@ from functools import reduce
 
 from scripts.benchmarks.data_model import DataModel
 from scripts.drawer import draw
-from scripts.utils.experimentdatabase import Experiment
+from scripts.utils.experimentdatabase import Experiment, Database
 from scripts.utils.logger import Logger
 from scripts.utils.sampler import bounding_sphere
 from scripts.utils.clustering import xmeans_clustering
 from sklearn.metrics import confusion_matrix
+from scripts.benchmarks.benchmark_model import BenchmarkModel
 
 log = Logger(name='cma-es')
 
@@ -21,10 +22,10 @@ def to_str(w: [list, np.ndarray]):
 class CMAESAlgorithm:
 
     def __init__(self, w0, n_constraints: int, sigma0: float,
-                 scaler: [StandardScaler, None], data_model: DataModel, margin: float,
-                 x0: np.ndarray = None, satisfies_constraints: [callable, None] = None, clustering: bool=False, seed: int = 404):
+                 scaler: [StandardScaler, None], model_name: str, k: int, n: int, margin: float,
+                 x0: np.ndarray = None, satisfies_constraints: [callable, None] = None, clustering_k_min: int=0, seed: int = 404):
         assert len(w0) == n_constraints
-
+        data_model = DataModel(name=model_name, B=[1] * k, n=n)
         self.__w0 = w0
         self.__x0 = x0
         self.__train_X = data_model.train_set()
@@ -37,7 +38,7 @@ class CMAESAlgorithm:
         self.__data_model = data_model
         self.__margin = margin
         self.matches_constraints = satisfies_constraints if satisfies_constraints is not None else self.satisfies_constraints
-        self.__clustering = clustering
+        self.__clustering = clustering_k_min
         self.__results = list()
         self.__seed = seed
 
@@ -47,8 +48,8 @@ class CMAESAlgorithm:
             self.__valid_X = self.__scaler.transform(self.__valid_X)
             self.test_X = self.__scaler.transform(self.test_X)
 
-        if clustering:
-            self.clusters = [self.__train_X[x] for x in xmeans_clustering(self.__train_X)]
+        if clustering_k_min:
+            self.clusters = [self.__train_X[x] for x in xmeans_clustering(self.__train_X, kmin=clustering_k_min)]
         else:
             self.clusters = [self.__train_X]
 
@@ -189,7 +190,7 @@ class CMAESAlgorithm:
         else:
             pass
 
-    def experiment(self, experiment: Experiment):
+    def experiment(self):
         _n = len(self.clusters)
 
         if self.__clustering:
@@ -204,6 +205,9 @@ class CMAESAlgorithm:
             cma_es = self.__cma_es()
             self.__results.append(cma_es)
             log.debug("Finished analyzing train dataset")
+
+        database = Database(database_filename='experiments.sqlite')
+        experiment = database.new_experiment()
 
         try:
             experiment['seed'] = self.__seed
@@ -244,7 +248,7 @@ class CMAESAlgorithm:
 
     @property
     def sql_params(self):
-        return (self.__n_constraints, len(self.clusters), self.__margin, self.__sigma0, self.__data_model.benchmark_model.k,
+        return (self.__n_constraints, self.__margin, self.__sigma0, self.__data_model.benchmark_model.k,
                  self.__data_model.benchmark_model.i, self.__seed,
                  self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
 
