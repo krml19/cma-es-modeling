@@ -9,23 +9,16 @@ from requests.structures import CaseInsensitiveDict
 from sortedcontainers import SortedSet
 
 __author__ = 'Tomasz Pawlak'
-__version__ = '1.0.20171128'
+__version__ = '1.0.20180320'
 
-# This script requires sqlite3 module shipped with Python 3.6+, as this version does not automatically commit transaction before executing DDL statement
-# See for details: https://docs.python.org/3.6/library/sqlite3.html#controlling-transactions
+# This script requires sqlite3 module shipped with Python 3.6+, as the previous versions automatically commit a transaction before executing a DDL statement
+# For details see https://docs.python.org/3.6/library/sqlite3.html#controlling-transactions
 # As a version number of sqlite3 module does not change between Pythons 3.5 and 3.6, we have to check both:
 assert sys.version_info >= (3, 6)
 assert sqlite3.version_info >= (2, 6)
 
 
 class DataSet(CaseInsensitiveDict):
-    __id = -1
-    __database = None
-    __closed = False
-
-    __table_name = ""
-    __parent = None
-    __children = None
 
     @property
     def id(self) -> int:
@@ -47,6 +40,9 @@ class DataSet(CaseInsensitiveDict):
         assert name is not None
         assert database is not None
 
+        self.__id = -1
+        self.__database = None
+        self.__closed = False
         self.__table_name = Helpers.fix_data_object_name(name)
         self.__parent = parent
         self.__database = database
@@ -133,12 +129,9 @@ class Experiment(DataSet):
 class Database:
     __CREATE_EXPERIMENTS_TABLE = "CREATE TABLE IF NOT EXISTS experiments(id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT)"
 
-    engine = None
-    _columns = None
-    __closed = False
-
     def __init__(self, database_filename: str):
         try:
+            self.__closed = False
             self.engine = DatabaseEngine(database_filename)
             try:
                 self.engine.begin_transaction()
@@ -270,8 +263,6 @@ class Database:
 
 class DatabaseEngine:
     __extensions = []
-    __current_transaction_level = 0
-    __closed = False
 
     @property
     def last_insert_id(self) -> int:
@@ -279,10 +270,14 @@ class DatabaseEngine:
         return int(self.__cursor.fetchone()[0])
 
     def __init__(self, database_file):
-        self.__connection = sqlite3.connect(database_file, 60.0, isolation_level="DEFERRED")
+        self.__closed = False
+        self.__current_transaction_level = 0
+        # concurrent DEFERRED transactions have problems with locks on Windows (This is strange, as the problem does not happen in Java nor .NET)
+        self.__connection = sqlite3.connect(database_file, 1 << 30, isolation_level="IMMEDIATE")
         self.__connection.row_factory = sqlite3.Row
         self.__cursor = self.__connection.cursor()
-        self.__cursor.execute("PRAGMA busy_timeout = %d" % (1 << 31))
+        self.__cursor.execute("PRAGMA busy_timeout = %d" % (1 << 30))
+        assert self.__cursor.execute("PRAGMA busy_timeout").fetchall()[0][0] == 1 << 30, self.__cursor.execute("PRAGMA busy_timeout").fetchall()[0][0]
         # disable foreign key support when filling database due to:
         # 1) performance,
         # 2) ON DELETE clause in foreign key definition, which causes deletions in iterations table when user requires replacement of a tuple in experiment table
@@ -301,7 +296,8 @@ class DatabaseEngine:
         transaction is committed.The roll backs of outer transactions also roll back the nested transactions."""
         self.__check_closed()
         if self.__current_transaction_level == 0:
-            self.__cursor.execute("BEGIN DEFERRED TRANSACTION")
+            # concurrent DEFERRED transactions have problems with locks on Windows (This is strange, as the problem does not happen in Java nor .NET)
+            self.__cursor.execute("BEGIN IMMEDIATE TRANSACTION")
         else:
             self.__cursor.execute("SAVEPOINT sp_%d" % self.__current_transaction_level)
         self.__current_transaction_level += 1  # in case SAVEPOINT failed
@@ -362,7 +358,6 @@ class DatabaseEngine:
 class DatabaseException(Exception):
     def __init__(self, message: str):
         super().__init__(message)
-
 
 
 class Helpers:

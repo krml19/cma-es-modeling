@@ -69,7 +69,7 @@ class AlgorithmRunner:
                 algorithm_params['clustering_k_min'],
                 algorithm_params['scaler'] is not None)
 
-    def data_source(self, constraints_generator: callable = f_2n, w0: np.ndarray = np.repeat(1, 4), sigma0: float = 1,
+    def data_source(self, constraints_generator: callable = f_2n, sigma0: float = 1,
                     margin: float = 1, scaler: [StandardScaler, None] = None, satisfies_constraints: [callable, None] = None,
                     clustering_k_min: int = 0):
 
@@ -78,11 +78,12 @@ class AlgorithmRunner:
         # FIXME: Changes ranges
         for k in range(1, 2):
             for n in range(2, 3):
-                for model in ['ball', 'simplex', 'cube']:
-                    for seed in range(1, 31):
+                # for model in ['ball', 'simplex', 'cube']:
+                for model in ['ball']:
+                    for seed in range(1, 2):
                         inopts = dict()
                         inopts['n_constraints'] = constraints_generator(n)
-                        inopts['w0'] = w0
+                        inopts['w0'] = np.repeat(1, constraints_generator(n))
                         inopts['sigma0'] = sigma0
                         inopts['k'] = k
                         inopts['n'] = n
@@ -120,7 +121,7 @@ class AlgorithmRunner:
         experiments = flat(experiments)
         experiments = self.filter_algorithms(experiments, database=database)
 
-        pool = Pool(processes=4)  # start 4 worker processes
+        pool = Pool(processes=1)  # start 4 worker processes
         pool.map(self.run_instance, experiments)
 
 

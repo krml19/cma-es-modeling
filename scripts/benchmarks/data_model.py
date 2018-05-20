@@ -31,7 +31,7 @@ class DataModel:
 
     def test_set(self) -> tuple:
         test = self.__get_dataset(self.__filename(Paths.test.value))
-        return test[:, :-1], test[:, -1]
+        return test[:, :-1].astype(float), test[:, -1].astype(int)
 
     def valid_set(self) -> np.ndarray:
         return self.__get_dataset(self.__filename(Paths.valid.value))

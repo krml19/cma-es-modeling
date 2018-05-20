@@ -97,7 +97,7 @@ class CMAESAlgorithm:
 
         # confusion matrix
         y_true = self.__test_Y
-        tn, fp, fn, tp = confusion_matrix(y_true=y_true.astype(int), y_pred=y_pred.astype(int)).ravel()
+        tn, fp, fn, tp = confusion_matrix(y_true=y_true, y_pred=y_pred.astype(int)).ravel()
 
         # tp
         card_b, tp = self.test_X.shape[0], y_pred.sum()
@@ -252,16 +252,9 @@ class CMAESAlgorithm:
                  self.__data_model.benchmark_model.i, self.__seed,
                  self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
 
-# n = 5
-# w0 = np.repeat(1, n)
-# x0 = None
-# scaler = None
-# model = DataModel(model=Ball(i=2, B=[1]))
-#
-# algorithm = CMAESAlgorithm(n_constraints=n, w0=w0, sigma0=1, data_model=model,
-#                            scaler=scaler, margin=1, x0=x0, clustering=False,
-#                            satisfies_constraints=model.benchmark_model.benchmark_objective_function)
-# algorithm.experiment()
-#
-# args = dict(n_constraints=1, w0=w0, sigma0=1, data_model=model, scaler=scaler, margin=1, x0=x0, clustering=False,
-#             satisfies_constraints=None)
+n = 5
+w0 = np.repeat(1, n)
+
+algorithm = CMAESAlgorithm(n_constraints=n, w0=w0, sigma0=1, k=1,
+                           scaler=None, margin=1, clustering_k_min=0, model_name='ball', n=2)
+algorithm.experiment()
