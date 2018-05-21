@@ -78,8 +78,9 @@ class AlgorithmRunner:
         # FIXME: Changes ranges
         for k in range(1, 3):
             for n in range(2, 4):
-                for model in ['ball', 'simplex', 'cube']:
-                    for seed in range(2, 31):
+                for model in ['cube']:
+                # for model in ['ball', 'simplex', 'cube']:
+                    for seed in range(1, 3):
                         inopts = dict()
                         inopts['n_constraints'] = constraints_generator(n)
                         inopts['w0'] = np.repeat(1, constraints_generator(n))
@@ -99,6 +100,9 @@ class AlgorithmRunner:
 
     def experiments_1(self) -> list:
         return [self.data_source(scaler=scaler) for scaler in [None, StandardScaler()]]
+
+    def experiments_1_train(self) -> list:
+        return [self.data_source(scaler=scaler, db='train') for scaler in [None, StandardScaler()]]
 
     def experiments_2(self) -> list:
         return [self.data_source(constraints_generator=constraints_generator) for
@@ -121,8 +125,10 @@ class AlgorithmRunner:
         algorithm.experiment()
 
     def run(self, experiments: list):
-        database = Database(database_filename='experiments.sqlite')
+
         experiments = flat(experiments)
+        db = experiments[0]['db'] + '.sqlite'
+        database = Database(database_filename=db)
         experiments = self.filter_algorithms(experiments, database=database)
 
         pool = Pool(processes=4)  # start 4 worker processes

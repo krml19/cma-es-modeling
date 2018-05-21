@@ -71,6 +71,7 @@ class BenchmarkModel:
         samples = sampler.samples(self.bounds, rows=self.test_rows)
         df = pd.DataFrame(samples.T, columns=cols)
 
+        assert df.shape[0] == self.test_rows
         self.__save(df=df, path=fh.Paths.valid.value)
         return df
 
@@ -80,11 +81,13 @@ class BenchmarkModel:
         df = pd.DataFrame(samples.T, columns=cols)
         self.logger.debug('Generating validation columns')
         df['valid'] = self.generate_valid_column(df)
+        assert df.shape[0] == self.test_rows
         self.__save(df=df, path=fh.Paths.test.value)
         return df
 
     def generate_datasets(self):
-        self.generate_train_dataset()
+        # FIXME uncomment train dataset generation
+        # self.generate_train_dataset()
         self.generate_validation_dataset()
         self.generate_test_dataset()
 

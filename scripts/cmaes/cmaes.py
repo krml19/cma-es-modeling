@@ -24,7 +24,7 @@ class CMAESAlgorithm:
     def __init__(self, w0, n_constraints: int, sigma0: float,
                  scaler: [StandardScaler, None], model_name: str, k: int, n: int, margin: float,
                  x0: np.ndarray = None, benchmark_mode: bool = False, clustering_k_min: int=0, seed: int = 404,
-                 db: str = 'experiments', experiment_n: int = 1):
+                 db: str = 'experiments', experiment_n: int = 1, draw: bool = False):
         assert len(w0) == n_constraints
         data_model = DataModel(name=model_name, B=[1] * k, n=n)
         self.__w0 = w0
@@ -45,6 +45,7 @@ class CMAESAlgorithm:
         self.db = db
         self.experiment_n = experiment_n
         self.benchmark_mode = benchmark_mode
+        self.draw = draw
 
 
         if scaler is not None:
@@ -87,8 +88,8 @@ class CMAESAlgorithm:
 
     def best_results(self):
         final_results = dict()
-        y_pred = np.ones(self.__test_Y.shape)
-        y_valid_pred = np.ones(self.__test_Y.shape)
+        y_pred = np.zeros(self.__test_Y.shape)
+        # y_valid_pred = np.zeros(self.__test_Y.shape)
 
         for result in self.__results:
             assert isinstance(result, cma.CMAEvolutionStrategy)
@@ -97,19 +98,23 @@ class CMAESAlgorithm:
             w0 = w[-1:]
             w = w[:-1]
 
-            y_pred = y_pred * self.matches_constraints(self.test_X, w, w0)
-            y_valid_pred = y_valid_pred * self.matches_constraints(self.__valid_X, w, w0)
+            y_pred = y_pred + self.matches_constraints(self.test_X, w, w0)
+            # y_valid_pred = y_valid_pred + self.matches_constraints(self.__valid_X, w, w0)
+        y_pred = y_pred > 0
+        # y_valid_pred = y_valid_pred > 0
 
         # confusion matrix
         y_true = self.__test_Y
         tn, fp, fn, tp = confusion_matrix(y_true=y_true, y_pred=y_pred.astype(int)).ravel()
 
         # tp
-        card_b, tp = self.test_X.shape[0], y_pred.sum()
+        card_b = self.test_X.shape[0]
+        tp = (y_true * y_pred).sum()
         recall = tp / card_b
 
         # p
-        card_p, p = self.__valid_X.shape[0], y_valid_pred.sum()
+        card_p = self.test_X.shape[0]
+        p = y_pred.sum()
 
         # p_y
         pr_y = p / card_p
@@ -119,6 +124,8 @@ class CMAESAlgorithm:
         f = (recall ** 2) / pr_y
         f = -f
 
+        log.debug('Y pred: {}, true: {}, ratio: {}'.format(y_pred.sum(), y_true.sum(), y_pred.sum() / y_true.sum()))
+        log.debug('final f: {}'.format(f))
         # final results
         final_results['tn'] = tn
         final_results['tp'] = tp
@@ -143,7 +150,8 @@ class CMAESAlgorithm:
 
         x0 = self.__expand_initial_w(x0=x0)
         f = self.__objective_function(np.array(x0))
-        # self.__draw_results(np.array(x0), title='Initial solution: {}'.format(f))
+        if self.draw:
+            self.__draw_results(np.array(x0), title='Initial solution: {}'.format(f))
 
         es = cma.CMAEvolutionStrategy(x0=x0, sigma0=self.__sigma0, inopts={'seed': self.__seed, 'maxiter': int(1e4)})
 
@@ -158,7 +166,8 @@ class CMAESAlgorithm:
             log.debug(es.result)
 
         log.info("Best: {}, w: {}".format(es.best.f, es.best.x))
-        # self.__draw_results(es.best.x, title='Best solution: {}'.format(es.best.f))
+        if self.draw:
+            self.__draw_results(es.best.x, title='Best solution: {}'.format(es.best.f))
         # es.plot()
         return es
 
@@ -184,10 +193,10 @@ class CMAESAlgorithm:
         valid = pd.DataFrame(data=data, columns=names)
         valid['valid'] = pd.Series(data=self.matches_constraints(self.__valid_X, w, w0), name='valid')
 
-        train = self.__train_X if self.__scaler is None else self.__scaler.inverse_transform(self.__train_X)
+        train = self.test_X if self.__scaler is None else self.__scaler.inverse_transform(self.test_X)
         train = pd.DataFrame(data=train, columns=names)
-        train['valid'] = pd.Series(data=self.matches_constraints(self.__train_X, w, w0), name='valid')
-
+        train['valid'] = pd.Series(data=self.matches_constraints(self.test_X, w, w0), name='valid')
+        # train['valid'] = self.__test_Y
         if valid.shape[1] == 3:
             draw.draw2dmodel(df=valid, train=train, constraints=np.split(w, self.__n_constraints, axis=1), title=title, model=self.__data_model.benchmark_model.name)
         elif valid.shape[1] == 4:
@@ -260,10 +269,12 @@ class CMAESAlgorithm:
                  self.__data_model.benchmark_model.i, self.__seed,
                  self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
 
-n = 6
-w0 = np.repeat(1, n)
-seed = 1
 
-algorithm = CMAESAlgorithm(n_constraints=n, w0=w0, sigma0=1, k=1,
-                           scaler=StandardScaler(), margin=1.1, clustering_k_min=0, model_name='cube', n=3, seed=seed)
-algorithm.experiment()
+# n = 3
+# constraints = n * 2
+# w0 = np.repeat(1, constraints)
+# seed = 2
+#
+# algorithm = CMAESAlgorithm(n_constraints=constraints, w0=w0, sigma0=1, k=1,
+#                            scaler=StandardScaler(), margin=1.1, clustering_k_min=0, model_name='cube', n=n, seed=seed, draw=True)
+# algorithm.experiment()

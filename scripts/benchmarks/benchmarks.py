@@ -21,8 +21,8 @@ for n in range(2, 8):
 
 
 
-
-generate_model(model_type=Simplex, i=7, B=[1])
-
-for model in [Simplex, Ball, Cube]:
-    generate_model(model_type=model, i=7, B=2 * [1])
+#
+# generate_model(model_type=Simplex, i=7, B=[1])
+#
+# for model in [Simplex, Ball, Cube]:
+#     generate_model(model_type=model, i=7, B=2 * [1])
