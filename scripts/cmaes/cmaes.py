@@ -23,7 +23,8 @@ class CMAESAlgorithm:
 
     def __init__(self, w0, n_constraints: int, sigma0: float,
                  scaler: [StandardScaler, None], model_name: str, k: int, n: int, margin: float,
-                 x0: np.ndarray = None, satisfies_constraints: [callable, None] = None, clustering_k_min: int=0, seed: int = 404):
+                 x0: np.ndarray = None, benchmark_mode: bool = False, clustering_k_min: int=0, seed: int = 404,
+                 db: str = 'experiments', experiment_n: int = 1):
         assert len(w0) == n_constraints
         data_model = DataModel(name=model_name, B=[1] * k, n=n)
         self.__w0 = w0
@@ -37,10 +38,14 @@ class CMAESAlgorithm:
         self.__scaler = scaler
         self.__data_model = data_model
         self.__margin = margin
-        self.matches_constraints = satisfies_constraints if satisfies_constraints is not None else self.satisfies_constraints
+        self.matches_constraints = data_model.benchmark_model.benchmark_objective_function if benchmark_mode else self.satisfies_constraints
         self.__clustering = clustering_k_min
         self.__results = list()
         self.__seed = seed
+        self.db = db
+        self.experiment_n = experiment_n
+        self.benchmark_mode = benchmark_mode
+
 
         if scaler is not None:
             self.__scaler.fit(self.__train_X)
@@ -138,7 +143,7 @@ class CMAESAlgorithm:
 
         x0 = self.__expand_initial_w(x0=x0)
         f = self.__objective_function(np.array(x0))
-        self.__draw_results(np.array(x0), title='Initial solution: {}'.format(f))
+        # self.__draw_results(np.array(x0), title='Initial solution: {}'.format(f))
 
         es = cma.CMAEvolutionStrategy(x0=x0, sigma0=self.__sigma0, inopts={'seed': self.__seed, 'maxiter': int(1e4)})
 
@@ -153,7 +158,7 @@ class CMAESAlgorithm:
             log.debug(es.result)
 
         log.info("Best: {}, w: {}".format(es.best.f, es.best.x))
-        self.__draw_results(es.best.x, title='Best solution: {}'.format(es.best.f))
+        # self.__draw_results(es.best.x, title='Best solution: {}'.format(es.best.f))
         # es.plot()
         return es
 
@@ -206,10 +211,12 @@ class CMAESAlgorithm:
             self.__results.append(cma_es)
             log.debug("Finished analyzing train dataset")
 
-        database = Database(database_filename='experiments.sqlite')
+        database = Database(database_filename='{}.sqlite'.format(self.db))
         experiment = database.new_experiment()
 
         try:
+            experiment['experiment_n'] = self.experiment_n
+            experiment['benchmark_mode'] = self.benchmark_mode
             experiment['seed'] = self.__seed
             experiment['n_constraints'] = self.__n_constraints
             experiment['clusters'] = len(self.clusters)
@@ -244,6 +251,7 @@ class CMAESAlgorithm:
             experiment['error'] = e
         finally:
             experiment.save()
+            log.debug("Finished with f: {} and params: {}".format(final_results['f'], self.sql_params))
 
 
     @property
@@ -252,9 +260,10 @@ class CMAESAlgorithm:
                  self.__data_model.benchmark_model.i, self.__seed,
                  self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
 
-n = 5
+n = 6
 w0 = np.repeat(1, n)
+seed = 1
 
 algorithm = CMAESAlgorithm(n_constraints=n, w0=w0, sigma0=1, k=1,
-                           scaler=None, margin=1, clustering_k_min=0, model_name='ball', n=2)
+                           scaler=StandardScaler(), margin=1.1, clustering_k_min=0, model_name='cube', n=3, seed=seed)
 algorithm.experiment()

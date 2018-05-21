@@ -70,17 +70,16 @@ class AlgorithmRunner:
                 algorithm_params['scaler'] is not None)
 
     def data_source(self, constraints_generator: callable = f_2n, sigma0: float = 1,
-                    margin: float = 1, scaler: [StandardScaler, None] = None, satisfies_constraints: [callable, None] = None,
-                    clustering_k_min: int = 0):
+                    margin: float = 1.1, scaler: [StandardScaler, None] = None,
+                    clustering_k_min: int = 0, benchmark_mode: bool = False, db: str = 'experiments', experiment_n: int = 1):
 
         experiments = []
 
         # FIXME: Changes ranges
-        for k in range(1, 2):
-            for n in range(2, 3):
-                # for model in ['ball', 'simplex', 'cube']:
-                for model in ['ball']:
-                    for seed in range(1, 2):
+        for k in range(1, 3):
+            for n in range(2, 4):
+                for model in ['ball', 'simplex', 'cube']:
+                    for seed in range(2, 31):
                         inopts = dict()
                         inopts['n_constraints'] = constraints_generator(n)
                         inopts['w0'] = np.repeat(1, constraints_generator(n))
@@ -90,9 +89,11 @@ class AlgorithmRunner:
                         inopts['scaler'] = scaler
                         inopts['margin'] = margin
                         inopts['clustering_k_min'] = clustering_k_min
-                        inopts['satisfies_constraints'] = satisfies_constraints
                         inopts['seed'] = seed
                         inopts['model_name'] = model
+                        inopts['benchmark_mode'] = benchmark_mode
+                        inopts['db'] = db
+                        inopts['experiment_n'] = experiment_n
                         experiments.append(inopts)
         return experiments
 
@@ -112,6 +113,9 @@ class AlgorithmRunner:
     def experiments_5(self) -> list:
         return [self.data_source(margin=margin) for margin in [0.9, 1, 1.1]]
 
+    def benchmarks(self) -> list:
+        return [self.data_source(benchmark_mode=True, db='benchmarks')]
+
     def run_instance(self, inopts: dict):
         algorithm = CMAESAlgorithm(**inopts)
         algorithm.experiment()
@@ -121,7 +125,7 @@ class AlgorithmRunner:
         experiments = flat(experiments)
         experiments = self.filter_algorithms(experiments, database=database)
 
-        pool = Pool(processes=1)  # start 4 worker processes
+        pool = Pool(processes=4)  # start 4 worker processes
         pool.map(self.run_instance, experiments)
 
 

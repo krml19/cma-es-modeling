@@ -30,8 +30,9 @@ class Simplex(BenchmarkModel):
         _sum = sum(row)
         if not constraints.constraints[2].match(_sum):
             return False
+        values = row.values if hasattr(row, 'values') else row
 
-        for xi, xj in zip(row.values[::1], row.values[1::1]):
+        for xi, xj in zip(values[::1], values[1::1]):
             if not constraints.constraints[0].match(Simplex.constraint1(xi, xj)):
                 return False
             if not constraints.constraints[1].match(Simplex.constraint2(xi, xj)):
