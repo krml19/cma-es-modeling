@@ -12,7 +12,7 @@ from scripts.utils.sampler import bounding_sphere
 from scripts.utils.clustering import xmeans_clustering
 from sklearn.metrics import confusion_matrix
 from scripts.benchmarks.benchmark_model import BenchmarkModel
-
+import scripts.utils.constraints_generator as cg
 log = Logger(name='cma-es')
 
 def to_str(w: [list, np.ndarray]):
@@ -21,19 +21,21 @@ def to_str(w: [list, np.ndarray]):
 
 class CMAESAlgorithm:
 
-    def __init__(self, w0, n_constraints: int, sigma0: float,
+    def __init__(self, constraints_generator: str, sigma0: float,
                  scaler: [StandardScaler, None], model_name: str, k: int, n: int, margin: float,
                  x0: np.ndarray = None, benchmark_mode: bool = False, clustering_k_min: int=0, seed: int = 404,
                  db: str = 'experiments', experiment_n: int = 1, draw: bool = False):
-        assert len(w0) == n_constraints
         data_model = DataModel(name=model_name, B=[1] * k, n=n)
-        self.__w0 = w0
+
+        self.__n_constraints = cg.generate(constraints_generator, n)
+        self.__w0 = np.repeat(1, self.__n_constraints)
         self.__x0 = x0
         self.__train_X = data_model.train_set()
         self.__valid_X = data_model.valid_set()
         self.test_X, self.__test_Y = data_model.test_set()
         self.__dimensions = self.__train_X.shape[1]
-        self.__n_constraints = n_constraints
+        self.__constraints_generator = constraints_generator
+
         self.__sigma0 = sigma0
         self.__scaler = scaler
         self.__data_model = data_model
@@ -87,6 +89,7 @@ class CMAESAlgorithm:
         return f
 
     def best_results(self):
+        # TODO Ask: Do we really need validation dataset?
         final_results = dict()
         y_pred = np.zeros(self.__test_Y.shape)
         # y_valid_pred = np.zeros(self.__test_Y.shape)
@@ -108,9 +111,14 @@ class CMAESAlgorithm:
         tn, fp, fn, tp = confusion_matrix(y_true=y_true, y_pred=y_pred.astype(int)).ravel()
 
         # tp
-        card_b = self.test_X.shape[0]
-        tp = (y_true * y_pred).sum()
-        recall = tp / card_b
+        # card_b = self.test_X.shape[0]
+        # TODO Ask: Is that ok?
+        # tp = (y_true * y_pred).sum()
+        # recall = tp / card_b
+        # TODO Ask: Is that ok?
+
+        # Based on: https://en.wikipedia.org/wiki/Precision_and_recall
+        recall = tp / (tp + fn)
 
         # p
         card_p = self.test_X.shape[0]
@@ -124,8 +132,8 @@ class CMAESAlgorithm:
         f = (recall ** 2) / pr_y
         f = -f
 
-        log.debug('Y pred: {}, true: {}, ratio: {}'.format(y_pred.sum(), y_true.sum(), y_pred.sum() / y_true.sum()))
-        log.debug('final f: {}'.format(f))
+        log.info('Y pred: {}, true: {}, ratio: {}'.format(y_pred.sum(), y_true.sum(), y_pred.sum() / y_true.sum()))
+        log.info('final f: {}'.format(f))
         # final results
         final_results['tn'] = tn
         final_results['tp'] = tp
@@ -155,6 +163,10 @@ class CMAESAlgorithm:
 
         es = cma.CMAEvolutionStrategy(x0=x0, sigma0=self.__sigma0, inopts={'seed': self.__seed, 'maxiter': int(1e4)})
 
+        # FIXME: Add initial solution?
+        W = es.ask()
+        es.tell(W, [self.__objective_function(w) for w in W])
+
         # iterate until termination
         while not es.stop():
             W = es.ask()
@@ -165,7 +177,7 @@ class CMAESAlgorithm:
 
             log.debug(es.result)
 
-        log.info("Best: {}, w: {}".format(es.best.f, es.best.x))
+        log.debug("Best: {}, w: {}".format(es.best.f, es.best.x))
         if self.draw:
             self.__draw_results(es.best.x, title='Best solution: {}'.format(es.best.f))
         # es.plot()
@@ -228,6 +240,7 @@ class CMAESAlgorithm:
             experiment['benchmark_mode'] = self.benchmark_mode
             experiment['seed'] = self.__seed
             experiment['n_constraints'] = self.__n_constraints
+            experiment['constraints_generator'] = self.__constraints_generator
             experiment['clusters'] = len(self.clusters)
             experiment['clustering'] = self.__clustering
             experiment['margin'] = self.__margin
@@ -260,14 +273,14 @@ class CMAESAlgorithm:
             experiment['error'] = e
         finally:
             experiment.save()
-            log.debug("Finished with f: {} and params: {}".format(final_results['f'], self.sql_params))
+            # log.debug("Finished with f: {} and params: {}".format(final_results['f'], self.sql_params))
 
 
-    @property
-    def sql_params(self):
-        return (self.__n_constraints, self.__margin, self.__sigma0, self.__data_model.benchmark_model.k,
-                 self.__data_model.benchmark_model.i, self.__seed,
-                 self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
+    # @property
+    # def sql_params(self):
+    #     return (self.__n_constraints, self.__margin, self.__sigma0, self.__data_model.benchmark_model.k,
+    #              self.__data_model.benchmark_model.i, self.__seed,
+    #              self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
 
 
 # n = 3

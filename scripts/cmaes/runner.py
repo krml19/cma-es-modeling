@@ -4,6 +4,7 @@ import numpy as np
 from multiprocessing import Pool
 from scripts.utils.experimentdatabase import Database
 from scripts.utils.logger import Logger
+import scripts.utils.constraints_generator as cg
 
 log = Logger(name='runner')
 
@@ -12,36 +13,16 @@ def flat(l):
     return [item for sublist in l for item in sublist]
 
 
-def f_2n(n):
-    return 2 * n
-
-
-def f_2n2(n):
-    return 2 * n ** n
-
-
-def f_n3(n):
-    return np.power(n, 3)
-
-
-def f_2pn(n):
-    return np.power(2, n)
-
-
-def pr(x):
-    print(x)
-
-
 class AlgorithmRunner:
 
     @property
     def sql(self):
-        return "select count(*) from experiments where n_constraints=? and margin=? and sigma=? and k=? and n=? and seed=? and name=? and clustering=? and standardized=?"
+        return "select count(*) from experiments where constraints_generator=? and margin=? and sigma=? and k=? and n=? and seed=? and name=? and clustering=? and standardized=?"
 
     def check_if_table_is_empty(self, database: Database):
-        check_if_table_exists_query = "SELECT count(*) FROM experiments"
-        check_if_table_exists = len(database.engine.execute(check_if_table_exists_query).fetchone()) > 1
-        return check_if_table_exists
+        check_if_table_exists_query = "select count(*), * from main.experiments"
+        check_if_table_exists = len(database.engine.execute(check_if_table_exists_query).fetchone())
+        return check_if_table_exists > 1
 
     def filter_algorithms(self, experiments: list, database: Database) -> list:
         if not self.check_if_table_is_empty(database=database):
@@ -59,7 +40,7 @@ class AlgorithmRunner:
         return filtered
 
     def convert_to_sql_params(self, algorithm_params: dict):
-        return (algorithm_params['n_constraints'],
+        return (algorithm_params['constraints_generator'],
                 algorithm_params['margin'],
                 algorithm_params['sigma0'],
                 algorithm_params['k'],
@@ -69,7 +50,7 @@ class AlgorithmRunner:
                 algorithm_params['clustering_k_min'],
                 algorithm_params['scaler'] is not None)
 
-    def data_source(self, constraints_generator: callable = f_2n, sigma0: float = 1,
+    def data_source(self, constraints_generator: callable = cg.f_2n, sigma0: float = 1,
                     margin: float = 1.1, scaler: [StandardScaler, None] = None,
                     clustering_k_min: int = 0, benchmark_mode: bool = False, db: str = 'experiments', experiment_n: int = 1):
 
@@ -81,8 +62,7 @@ class AlgorithmRunner:
                 for model in ['ball', 'simplex', 'cube']:
                     for seed in range(1, 5):
                         inopts = dict()
-                        inopts['n_constraints'] = constraints_generator(n)
-                        inopts['w0'] = np.repeat(1, constraints_generator(n))
+                        inopts['constraints_generator'] = constraints_generator.__name__
                         inopts['sigma0'] = sigma0
                         inopts['k'] = k
                         inopts['n'] = n
@@ -105,7 +85,7 @@ class AlgorithmRunner:
 
     def experiments_2(self) -> list:
         return [self.data_source(constraints_generator=constraints_generator, experiment_n=2) for
-                       constraints_generator in [f_2n, f_2n2, f_n3, f_2pn]]
+                       constraints_generator in [cg.f_2n, cg.f_2n2, cg.f_n3, cg.f_2pn]]
 
     def experiments_3(self) -> list:
         return [self.data_source(clustering_k_min=kmin, experiment_n=3) for kmin in [0, 1, 2]]

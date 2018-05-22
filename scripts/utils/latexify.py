@@ -13,6 +13,29 @@ sep = ' & '
 pm = '\\,$\\pm$\\,'
 
 
+def mappings(value):
+    _mappings = {'f_2n': '2n',
+                'f_2n2': '2n^2',
+                'f_n3': '2n^3',
+                'f_2pn': '2^n'}
+    if value in _mappings.keys():
+        return _mappings[value]
+    else:
+        return value
+
+
+def math(value):
+    return '${{{}}}$'.format(value)
+
+
+def boldmath(value):
+    return '$\\bm{{{}}}$'.format(value)
+
+
+def convert_attribute_value(value):
+    return boldmath(mappings(value))
+
+
 def bold(text):
     return '\\textbf{{{input}}}'.format(input=text)
 
@@ -35,6 +58,11 @@ class DataTable:
         keys = [('row', key) for key in self.attribute_values]
         df[keys] = df.apply(self.create_row, axis=1)
 
+    def beautify_name(self, name: str):
+        components = name.split('_')
+        return '${name}_{{{n}}}^{{{k}}}$'.format(name=components[0], n=components[1], k=components[2]) if len(components) == 3 else name
+
+
     def create_row(self, series: pd.Series):
         unstucked = series.unstack().apply(
             lambda row: self.map_to_cell(row['rank_norm'], row['f_mean'], row['f_sem']))
@@ -47,13 +75,13 @@ class DataTable:
         return '\cellcolor[rgb]{{{color}}} {value} {pm} {error}'.format(color=self.map_to_color(norm_rank), value=value, pm=pm, error=error)
 
     def header(self):
-        return bold('problem') + sep + reduce(lambda x, y: bold(str(x)) + sep + bold(str(y)), self.attribute_values)
+        return bold('problem') + sep + reduce(lambda x, y: convert_attribute_value(x) + sep + convert_attribute_value(y), self.attribute_values)
 
     def top_caption(self, name, cols):
         return '\\hline\n \multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=cols, alignment='|c|', name=bold(name))
 
-    def concat_row(self, x):
-        return x.name + sep + reduce(lambda xi, yi: xi + sep + yi, x)
+    def concat_row(self, x: pd.Series):
+        return self.beautify_name(x.name) + sep + reduce(lambda xi, yi: xi + sep + yi, x)
 
     def rank(self, data: pd.DataFrame):
         result = bold("rank") + sep + reduce(lambda x, y: str(x) + sep + str(y), data['rank'].mean().round(decimals=self.decimals))
@@ -71,7 +99,6 @@ class DataTable:
         elements.append(self.rank(data))
         elements = list(map(lambda x: row(x), elements))
         reduced: str = reduce(lambda x, y: x + y, elements)
-        reduced = reduced.replace('_', '\_')
 
         return reduced
 
