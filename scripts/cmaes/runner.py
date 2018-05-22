@@ -77,10 +77,9 @@ class AlgorithmRunner:
 
         # FIXME: Changes ranges
         for k in range(1, 3):
-            for n in range(2, 4):
-                for model in ['cube']:
-                # for model in ['ball', 'simplex', 'cube']:
-                    for seed in range(1, 3):
+            for n in range(2, 5):
+                for model in ['ball', 'simplex', 'cube']:
+                    for seed in range(1, 5):
                         inopts = dict()
                         inopts['n_constraints'] = constraints_generator(n)
                         inopts['w0'] = np.repeat(1, constraints_generator(n))
@@ -105,17 +104,17 @@ class AlgorithmRunner:
         return [self.data_source(scaler=scaler, db='train') for scaler in [None, StandardScaler()]]
 
     def experiments_2(self) -> list:
-        return [self.data_source(constraints_generator=constraints_generator) for
+        return [self.data_source(constraints_generator=constraints_generator, experiment_n=2) for
                        constraints_generator in [f_2n, f_2n2, f_n3, f_2pn]]
 
     def experiments_3(self) -> list:
-        return [self.data_source(clustering_k_min=kmin) for kmin in [0, 1, 2]]
+        return [self.data_source(clustering_k_min=kmin, experiment_n=3) for kmin in [0, 1, 2]]
 
     def experiments_4(self) -> list:
-        return [self.data_source(sigma0=sigma) for sigma in [0.5, 1, 1.5]]
+        return [self.data_source(sigma0=sigma, experiment_n=4) for sigma in [0.5, 1, 1.5]]
 
     def experiments_5(self) -> list:
-        return [self.data_source(margin=margin) for margin in [0.9, 1, 1.1]]
+        return [self.data_source(margin=margin, experiment_n=5) for margin in [0.9, 1, 1.1]]
 
     def benchmarks(self) -> list:
         return [self.data_source(benchmark_mode=True, db='benchmarks')]
@@ -136,5 +135,5 @@ class AlgorithmRunner:
 
 
 runner = AlgorithmRunner()
-experiments = runner.experiments_1()
+experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3()])
 runner.run(experiments)

@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 import pandas as pd
 from functools import reduce
 
@@ -74,10 +76,35 @@ class DataTable:
 
 
 class Component:
-    _body: [str, type] = ''
-    component_type: [str, None] = None
-    bracket_options: [str, None] = None
-    curly_options: [str, None] = None
+    value = None
+    _template: str = None
+
+    def build(self) -> str:
+        return self._template.format(self.value) if self.value is not None else ''
+
+
+class Label(Component):
+    _template = '\\label{{{}}}\n'
+
+
+class Caption(Component):
+    _template = '\\caption{{{}}}\n'
+
+
+class Brackets(Component):
+    _template = '[{}]'
+
+
+class Curly(Component):
+    _template = '{{{}}}'
+
+
+class Environment:
+    def __init__(self):
+        self._body: [str, type] = ''
+        self.component_type: [str, None] = None
+        self.bracket_options: Brackets = Brackets()
+        self.curly_options: Curly = Curly()
 
     @property
     def body(self) -> [str, type]:
@@ -88,57 +115,77 @@ class Component:
         self._body = value
 
     def build(self) -> str:
-        bracket_options = '[{}]'.format(self.bracket_options) if self.bracket_options is not None else ''
-        curly_options = '{{{}}}'.format(self.curly_options) if self.curly_options is not None else ''
-        body = self.body.build() if isinstance(self.body, Component) else self.body
+        bracket_options = self.bracket_options.build()
+        curly_options = self.curly_options.build()
+        body = self.body.build() if isinstance(self.body, Environment) else self.body
         return '\\begin{{{component}}}{curly}{brackets}\n' \
                '{body}\n' \
                '\\end{{{component}}}\n'.format(component=self.component_type, curly=curly_options, brackets=bracket_options, body=body)
 
 
-class Centering(Component):
-    component_type = 'centering'
+class Centering(Environment):
+    def __init__(self):
+        super().__init__()
+        self.component_type = 'centering'
 
 
-class Table(Component):
-    component_type = 'table'
+class Table(Environment):
+    def __init__(self):
+        super().__init__()
+        self.component_type = 'table'
 
-    @Component.body.setter
+    @Environment.body.setter
     def body(self, value):
-        label = '\\label{{{label}}}\n'.format(label=self.label) if self.label is not None else ''
-        caption = '\\caption{{{caption}}}'.format(caption=self.caption) if self.label is not None else ''
-        value = value.build() if isinstance(value, Component) else value
-        value = value + label + caption
-        Component.body.fset(self, value)
+        value = value.build() if isinstance(value, Environment) else value
+        value = value + self.label.build() + self.caption.build()
+        Environment.body.fset(self, value)
 
-    label = 'label'
-    caption = 'caption'
+    label = Label()
+    caption = Caption()
 
-class Tabular(Component):
-    component_type = 'tabular'
 
-    @Component.body.setter
+class Tabular(Environment):
+    def __init__(self):
+        super().__init__()
+        self.component_type = 'tabular'
+
+    @Environment.body.setter
     def body(self, value):
         if isinstance(value, DataTable):
             columns = ['c|'] * value.cols
             columns = '|l|' + reduce(lambda x, y: x + y, columns)
-            self.curly_options = columns
-            Component.body.fset(self, value.create_table())
+            self.curly_options.value = columns
+            Environment.body.fset(self, value.create_table())
         else:
-            Component.body.fset(self, value)
+            Environment.body.fset(self, value)
 
 
-aggregator = Aggragator()
-data_frame = aggregator.fit()
+Experiment = namedtuple('Experiment', ['experiment', 'benchmark_mode', 'attribute', 'caption', 'label', 'header'])
 
-data_table = DataTable(data_frame, 'Standaryzacja', attribute=aggregator.attribute, attribute_values=aggregator.attribute_values)
 
-tabular = Tabular()
-tabular.body = data_table
+def table(experiment: Experiment):
+    aggregator = Aggragator(experiment=experiment.experiment, benchmark_mode=experiment.benchmark_mode, attribute=experiment.attribute)
+    data_frame = aggregator.transform()
 
-table = Table()
-table.body = tabular
+    data_table = DataTable(data_frame, experiment.header, attribute=aggregator.attribute,
+                           attribute_values=aggregator.attribute_values)
 
-centering = Centering()
-centering.body = table
-print(centering.build())
+    tabular = Tabular()
+    tabular.body = data_table
+
+    table = Table()
+    table.label.value = experiment.label
+    table.caption.value = experiment.caption
+    table.body = tabular
+
+    centering = Centering()
+    centering.body = table
+    print(centering.build())
+
+
+experiment1 = Experiment(experiment=1, benchmark_mode=False, attribute='standardized', caption='Wpływ standaryzacji', label='experiment1', header='Standaryzacja')
+# experiment2 = Experiment(experiment=2, benchmark_mode=False, attribute='standardized', caption='', label='')
+# experiment3 = Experiment(experiment=3, benchmark_mode=False, attribute='standardized', caption='', label='')
+# experiment4 = Experiment(experiment=4, benchmark_mode=False, attribute='standardized', caption='', label='')
+# experiment5 = Experiment(experiment=5, benchmark_mode=False, attribute='standardized', caption='', label='')
+table(experiment=experiment1)

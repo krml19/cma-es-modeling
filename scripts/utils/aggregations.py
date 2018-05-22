@@ -1,30 +1,30 @@
 import pandas as pd
 import sqlite3
 from sklearn.preprocessing import MinMaxScaler
-# from scripts.utils.latexify import DataTable
 
 
 class Aggragator:
-    attribute: str = 'standardized'
-    attribute_values: list = None
-    experiment: int = 1
+    def __init__(self, experiment: int, attribute: str, benchmark_mode: bool = False):
 
-    def fit(self):
-        sql = "SELECT * FROM experiments WHERE benchmark_mode=0 AND experiment_n={}".format(self.experiment)
+        self.attribute = attribute
+        self.experiment = experiment
+        self.attribute_values: list = None
+        self.benchmark_mode = int(benchmark_mode)
+
+    def transform(self) -> pd.DataFrame:
+        sql = "SELECT * FROM experiments WHERE benchmark_mode={} AND experiment_n={}".format(self.benchmark_mode, self.experiment)
         conn = sqlite3.connect("experiments.sqlite")
-        # sql = "SELECT * FROM experiments"
-        # conn = sqlite3.connect("benchmarks.sqlite")
         df = pd.read_sql_query(sql, conn)
         conn.close()
 
         grouping_attributes = ['n_constraints', 'clustering', 'margin', 'standardized', 'sigma', 'name', 'k', 'n']
 
-        df2 = df.groupby(grouping_attributes).apply(self.get_stats)
-        data_frame = self.expand_dataframes(df2, self.attribute)
+        df2 = df.groupby(grouping_attributes).apply(self.__get_stats)
+        data_frame = self.__expand_dataframes(df2, self.attribute)
         return data_frame
 
 
-    def get_stats(self, group):
+    def __get_stats(self, group):
         results = {
             'f_mean': group['f'].mean(),
             'f_sem': group['f'].sem(),
@@ -41,13 +41,13 @@ class Aggragator:
         }
         return pd.Series(results, name='metrics')
 
-    def normalize(self, df):
+    def __normalize(self, df):
         scaler = MinMaxScaler()
         scaler.fit(df.values.reshape(-1, 1))
         df = df.applymap(lambda x: scaler.transform(x)[0][0])
         return df
 
-    def expand_dataframes(self, df2, ranking_attribute: str):
+    def __expand_dataframes(self, df2, ranking_attribute: str):
         data_frame: pd.DataFrame = df2.groupby(['name', ranking_attribute])[['f_mean', 'f_sem']].mean().unstack()
         self.attribute_values = list(df2[self.attribute].unique())
 
@@ -55,9 +55,11 @@ class Aggragator:
         data_frame[rank_keys] = data_frame['f_mean'].rank(axis=1, ascending=False)
 
         rank_norm_keys = [('rank_norm', key) for key in self.attribute_values]
-        data_frame[rank_norm_keys] = self.normalize(data_frame['rank'])
+        data_frame[rank_norm_keys] = self.__normalize(data_frame['rank'])
 
         return data_frame
+
+
 
 
 # aggregator = Aggragator()
