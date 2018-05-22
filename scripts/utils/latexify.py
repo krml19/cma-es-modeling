@@ -12,8 +12,9 @@ row_end = line_end + ' ' + hline
 sep = ' & '
 pm = '\\,$\\pm$\\,'
 
+
 def bold(text):
-    return '\\textbf{' + text + '}'
+    return '\\textbf{{{input}}}'.format(input=text)
 
 
 def row(text):
@@ -43,13 +44,13 @@ class DataTable:
         return '{},{},{}'.format(1 - x, x, 0)
 
     def map_to_cell(self, norm_rank: float, value: float, error: float) -> str:
-        return '\cellcolor[rgb]{' + self.map_to_color(norm_rank) + '} ' + str(value) + pm + str(error)
+        return '\cellcolor[rgb]{{{color}}} {value} {pm} {error}'.format(color=self.map_to_color(norm_rank), value=value, pm=pm, error=error)
 
     def header(self):
         return bold('problem') + sep + reduce(lambda x, y: bold(str(x)) + sep + bold(str(y)), self.attribute_values)
 
     def top_caption(self, name, cols):
-        return hline + eol + '\multicolumn{' + str(cols) + '}{|c|}{' + bold(name) + '}'
+        return '\\hline\n \multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=cols, alignment='|c|', name=bold(name))
 
     def concat_row(self, x):
         return x.name + sep + reduce(lambda xi, yi: xi + sep + yi, x)
