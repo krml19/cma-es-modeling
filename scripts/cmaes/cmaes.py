@@ -91,10 +91,9 @@ class CMAESAlgorithm:
         return f
 
     def best_results(self):
-        # TODO Ask: Do we really need validation dataset?
         final_results = dict()
         y_pred = np.zeros(self.__test_Y.shape)
-        # y_valid_pred = np.zeros(self.__test_Y.shape)
+        y_valid_pred = np.zeros(self.__test_Y.shape)
 
         for result in self.__results:
             assert isinstance(result, cma.CMAEvolutionStrategy)
@@ -104,27 +103,20 @@ class CMAESAlgorithm:
             w = w[:-1]
 
             y_pred = y_pred + self.matches_constraints(self.test_X, w, w0)
-            # y_valid_pred = y_valid_pred + self.matches_constraints(self.__valid_X, w, w0)
+            y_valid_pred = y_valid_pred + self.matches_constraints(self.__valid_X, w, w0)
         y_pred = y_pred > 0
-        # y_valid_pred = y_valid_pred > 0
+        y_valid_pred = y_valid_pred > 0
 
         # confusion matrix
         y_true = self.__test_Y
         tn, fp, fn, tp = confusion_matrix(y_true=y_true, y_pred=y_pred.astype(int)).ravel()
 
-        # tp
-        # card_b = self.test_X.shape[0]
-        # TODO Ask: Is that ok?
-        # tp = (y_true * y_pred).sum()
-        # recall = tp / card_b
-        # TODO Ask: Is that ok?
-
         # Based on: https://en.wikipedia.org/wiki/Precision_and_recall
         recall = tp / (tp + fn)
 
         # p
-        card_p = self.test_X.shape[0]
-        p = y_pred.sum()
+        card_p = self.__valid_X.shape[0]
+        p = y_valid_pred.sum()
 
         # p_y
         pr_y = p / card_p
