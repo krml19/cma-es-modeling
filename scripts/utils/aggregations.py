@@ -1,6 +1,7 @@
 import pandas as pd
 import sqlite3
 from sklearn.preprocessing import MinMaxScaler
+import scipy.stats as stats
 
 
 class Aggragator:
@@ -25,8 +26,8 @@ class Aggragator:
 
     def __get_stats(self, group):
         results = {
-            'f_mean': group['f'].mean(),
-            'f_sem': group['f'].sem(),
+            'f_mean': group['f'].mean() * -1,
+            'f_sem': group['f'].sem(ddof=0) * stats.norm.ppf(q=0.975),
             'tp_mean': group['tp'].mean(),
             'tn_mean': group['tn'].mean(),
             'fp_mean': group['fp'].mean(),
@@ -37,7 +38,10 @@ class Aggragator:
             'clustering': group['clustering'].iloc[0],
             'margin': group['margin'].iloc[0],
             'sigma': group['sigma'].iloc[0],
-            'model': "{}_{}_{}".format(group['name'].iloc[0], group['n'].iloc[0], group['k'].iloc[0]),
+            'model': "{}_{}_{}".format(group['name'].iloc[0], group['k'].iloc[0], group['n'].iloc[0]),
+            'name': group['name'].iloc[0],
+            'n': group['n'].iloc[0],
+            'k': group['k'].iloc[0],
         }
         return pd.Series(results, name='metrics')
 

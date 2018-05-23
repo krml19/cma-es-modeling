@@ -60,7 +60,7 @@ class DataTable:
 
     def beautify_name(self, name: str):
         components = name.split('_')
-        return '${name}_{{{n}}}^{{{k}}}$'.format(name=components[0], n=components[1], k=components[2]) if len(components) == 3 else name
+        return '${name}_{{{n}}}^{{{k}}}$'.format(name=components[0], n=components[2], k=components[1]) if len(components) == 3 else name
 
 
     def create_row(self, series: pd.Series):
@@ -69,7 +69,8 @@ class DataTable:
         return unstucked
 
     def map_to_color(self, x: float) -> str:
-        return '{},{},{}'.format(1 - x, x, 0)
+        return '{},{},{}'.format(x, 1 - x, 0)
+        # return '{},{},{}'.format(1 - x, x, 0)
 
     def map_to_cell(self, norm_rank: float, value: float, error: float) -> str:
         return '\cellcolor[rgb]{{{color}}} {value} {pm} {error}'.format(color=self.map_to_color(norm_rank), value=value, pm=pm, error=error)
@@ -220,4 +221,5 @@ experiment5 = Experiment(experiment=5, benchmark_mode=False, attribute='margin',
 
 # experiment4 = Experiment(experiment=4, benchmark_mode=False, attribute='standardized', caption='', label='')
 # experiment5 = Experiment(experiment=5, benchmark_mode=False, attribute='standardized', caption='', label='')
-table(experiment=experiment1)
+for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5]:
+    table(experiment=experiment)

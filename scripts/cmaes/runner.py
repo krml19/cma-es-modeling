@@ -55,7 +55,7 @@ class AlgorithmRunner:
                     clustering_k_min: int = 0, benchmark_mode: bool = False, db: str = 'experiments', experiment_n: int = 1):
 
         experiments = []
-
+        np.std()
         # FIXME: Changes ranges
         for k in range(1, 3):
             for n in range(2, 5):
@@ -91,7 +91,7 @@ class AlgorithmRunner:
         return [self.data_source(clustering_k_min=kmin, experiment_n=3) for kmin in [0, 1, 2]]
 
     def experiments_4(self) -> list:
-        return [self.data_source(sigma0=sigma, experiment_n=4) for sigma in [0.5, 1, 1.5]]
+        return [self.data_source(sigma0=sigma, experiment_n=4) for sigma in [0.125, 0.25, 0.5, 1]]
 
     def experiments_5(self) -> list:
         return [self.data_source(margin=margin, experiment_n=5) for margin in [0.9, 1, 1.1]]
