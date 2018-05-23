@@ -1,9 +1,9 @@
 from collections import namedtuple
-
 import pandas as pd
 from functools import reduce
-
 from scripts.utils.aggregations import Aggragator
+from scripts.csv.file_helper import write_tex_table
+import sys
 
 eol = '\n'
 hline = '\hline'
@@ -75,7 +75,8 @@ class DataTable:
         return '\cellcolor[rgb]{{{color}}} {value} {pm} {error}'.format(color=self.map_to_color(norm_rank), value=value, pm=pm, error=error)
 
     def header(self):
-        return bold('problem') + sep + reduce(lambda x, y: convert_attribute_value(x) + sep + convert_attribute_value(y), self.attribute_values)
+        attributes = list(map(lambda x: convert_attribute_value(x), self.attribute_values))
+        return bold('problem') + sep + reduce(lambda x, y: x + sep + y, attributes)
 
     def top_caption(self, name, cols):
         return '\\hline\n \multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=cols, alignment='|c|', name=bold(name))
@@ -188,7 +189,7 @@ class Tabular(Environment):
             Environment.body.fset(self, value)
 
 
-Experiment = namedtuple('Experiment', ['experiment', 'benchmark_mode', 'attribute', 'caption', 'label', 'header'])
+Experiment = namedtuple('Experiment', ['experiment', 'benchmark_mode', 'attribute', 'header'])
 
 
 def table(experiment: Experiment):
@@ -201,19 +202,22 @@ def table(experiment: Experiment):
     tabular = Tabular()
     tabular.body = data_table
 
-    table = Table()
-    table.label.value = experiment.label
-    table.caption.value = experiment.caption
-    table.body = tabular
+    document = tabular.build()
 
-    centering = Centering()
-    centering.body = table
-    print(centering.build())
+    print(document)
+    label = 'experiment{}'.format(experiment.experiment)
+    if len(sys.argv) > 1:
+        write_tex_table(filename=label, data=document, path=sys.argv[1])
+    else:
+        write_tex_table(filename=label, data=document)
 
 
-experiment1 = Experiment(experiment=1, benchmark_mode=False, attribute='standardized', caption='Wpływ standaryzacji', label='experiment1', header='Standaryzacja')
-# experiment2 = Experiment(experiment=2, benchmark_mode=False, attribute='standardized', caption='', label='')
-# experiment3 = Experiment(experiment=3, benchmark_mode=False, attribute='standardized', caption='', label='')
+experiment1 = Experiment(experiment=1, benchmark_mode=False, attribute='standardized', header='Standaryzacja')
+experiment2 = Experiment(experiment=2, benchmark_mode=False, attribute='constraints_generator',  header='Liczba ograniczeń')
+experiment3 = Experiment(experiment=3, benchmark_mode=False, attribute='clustering', header='kmin')
+experiment4 = Experiment(experiment=4, benchmark_mode=False, attribute='sigma', header='sigma')
+experiment5 = Experiment(experiment=5, benchmark_mode=False, attribute='margin', header='Margines')
+
 # experiment4 = Experiment(experiment=4, benchmark_mode=False, attribute='standardized', caption='', label='')
 # experiment5 = Experiment(experiment=5, benchmark_mode=False, attribute='standardized', caption='', label='')
 table(experiment=experiment1)

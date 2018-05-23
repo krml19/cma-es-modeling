@@ -10,11 +10,11 @@ def f_2n2(n: int) -> int:
 
 
 def f_n3(n: int) -> int:
-    return np.power(n, 3)
+    return int(np.power(n, 3))
 
 
 def f_2pn(n: int) -> int:
-    return np.power(2, n)
+    return int(np.power(2, n))
 
 
 def generate(f_name, value):

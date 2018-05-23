@@ -70,6 +70,8 @@ class CMAESAlgorithm:
         w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
         w0 = w[-1:]
         w = w[:-1]
+        log.debug(w)
+        log.debug(w0)
 
         # recall
         card_b, tp = self.__train_X.shape[0], self.matches_constraints(self.__train_X, w, w0).sum()
@@ -85,7 +87,7 @@ class CMAESAlgorithm:
         # f
         f = (recall ** 2) / pr_y
         f = -f
-        log.info("tp: {},\trecall: {},\tp: {},\t pr_y: {},\t\tf: {}".format(tp, p, recall, pr_y, f))
+        log.info("tp: {},\trecall: {},\tp: {},\t pr_y: {},\t\tf: {}".format(tp, recall, p, pr_y, f))
         return f
 
     def best_results(self):
@@ -284,10 +286,7 @@ class CMAESAlgorithm:
 
 
 # n = 3
-# constraints = n * 2
-# w0 = np.repeat(1, constraints)
-# seed = 2
-#
-# algorithm = CMAESAlgorithm(n_constraints=constraints, w0=w0, sigma0=1, k=1,
-#                            scaler=StandardScaler(), margin=1.1, clustering_k_min=0, model_name='cube', n=n, seed=seed, draw=True)
+# seed = 4
+# algorithm = CMAESAlgorithm(constraints_generator=cg.f_2pn.__name__, sigma0=0.1, k=1,
+#                            scaler=None, margin=1.1, clustering_k_min=0, model_name='cube', n=n, seed=seed, draw=True)
 # algorithm.experiment()

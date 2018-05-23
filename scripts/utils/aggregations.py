@@ -17,12 +17,11 @@ class Aggragator:
         df = pd.read_sql_query(sql, conn)
         conn.close()
 
-        grouping_attributes = ['n_constraints', 'clustering', 'margin', 'standardized', 'sigma', 'name', 'k', 'n']
+        grouping_attributes = ['constraints_generator', 'clustering', 'margin', 'standardized', 'sigma', 'name', 'k', 'n']
 
         df2 = df.groupby(grouping_attributes).apply(self.__get_stats)
         data_frame = self.__expand_dataframes(df2, self.attribute)
         return data_frame
-
 
     def __get_stats(self, group):
         results = {
@@ -34,10 +33,11 @@ class Aggragator:
             'fn_mean': group['fn'].mean(),
             'standardized': group['standardized'].iloc[0],
             'n_constraints': group['n_constraints'].iloc[0],
+            'constraints_generator': group['constraints_generator'].iloc[0],
             'clustering': group['clustering'].iloc[0],
             'margin': group['margin'].iloc[0],
             'sigma': group['sigma'].iloc[0],
-            'name': "{}_{}_{}".format(group['name'].iloc[0], group['n'].iloc[0], group['k'].iloc[0]),
+            'model': "{}_{}_{}".format(group['name'].iloc[0], group['n'].iloc[0], group['k'].iloc[0]),
         }
         return pd.Series(results, name='metrics')
 
@@ -48,7 +48,7 @@ class Aggragator:
         return df
 
     def __expand_dataframes(self, df2, ranking_attribute: str):
-        data_frame: pd.DataFrame = df2.groupby(['name', ranking_attribute])[['f_mean', 'f_sem']].mean().unstack()
+        data_frame: pd.DataFrame = df2.groupby(['model', ranking_attribute])[['f_mean', 'f_sem']].mean().unstack()
         self.attribute_values = list(df2[self.attribute].unique())
 
         rank_keys = [('rank', key) for key in self.attribute_values]

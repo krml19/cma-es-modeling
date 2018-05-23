@@ -28,7 +28,7 @@ def cartesian(n: int, dim: int, r: float=1):
 
     phis = [np.array(i) for i in itertools.product(phis, repeat=dim-1)]
     random.shuffle(phis)
-    phis = itertools.islice(phis, n)
+    phis = itertools.islice(phis, 0, int(n))
 
     coordinates = [ct(phi, r=r) for phi in phis]
     return np.concatenate(coordinates)

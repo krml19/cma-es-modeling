@@ -17,12 +17,11 @@ class AlgorithmRunner:
 
     @property
     def sql(self):
-        return "select count(*) from experiments where constraints_generator=? and margin=? and sigma=? and k=? and n=? and seed=? and name=? and clustering=? and standardized=?"
+        return "select count(*) from experiments where constraints_generator=? and margin=? and sigma=? and k=? and n=? and seed=? and name=? and clustering=? and standardized=? and experiment_n=?"
 
     def check_if_table_is_empty(self, database: Database):
-        check_if_table_exists_query = "select count(*), * from main.experiments"
-        check_if_table_exists = len(database.engine.execute(check_if_table_exists_query).fetchone())
-        return check_if_table_exists > 1
+        check_if_table_exists = database.engine.execute("select count(*) from main.experiments").fetchone()[0]
+        return check_if_table_exists > 0
 
     def filter_algorithms(self, experiments: list, database: Database) -> list:
         if not self.check_if_table_is_empty(database=database):
@@ -36,7 +35,7 @@ class AlgorithmRunner:
             if exists == 0:
                 filtered.append(algorithm)
             else:
-                log.info("Experiment already exists.")
+                log.info("Experiment already exists: {}".format(algorithm))
         return filtered
 
     def convert_to_sql_params(self, algorithm_params: dict):
@@ -48,7 +47,8 @@ class AlgorithmRunner:
                 algorithm_params['seed'],
                 algorithm_params['model_name'],
                 algorithm_params['clustering_k_min'],
-                algorithm_params['scaler'] is not None)
+                algorithm_params['scaler'] is not None,
+                algorithm_params['experiment_n'])
 
     def data_source(self, constraints_generator: callable = cg.f_2n, sigma0: float = 1,
                     margin: float = 1.1, scaler: [StandardScaler, None] = None,
@@ -115,5 +115,5 @@ class AlgorithmRunner:
 
 
 runner = AlgorithmRunner()
-experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3()])
+experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
 runner.run(experiments)
