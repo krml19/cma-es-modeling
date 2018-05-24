@@ -2,7 +2,7 @@ import pandas as pd
 import sqlite3
 from sklearn.preprocessing import MinMaxScaler
 import scipy.stats as stats
-
+from functools import reduce
 
 class Aggragator:
     def __init__(self, experiment: int, attribute: str, benchmark_mode: bool = False):
@@ -11,6 +11,7 @@ class Aggragator:
         self.experiment = experiment
         self.attribute_values: list = None
         self.benchmark_mode = int(benchmark_mode)
+        self.info = None
 
     def transform(self) -> pd.DataFrame:
         sql = "SELECT * FROM experiments WHERE benchmark_mode={} AND experiment_n={}".format(self.benchmark_mode, self.experiment)
@@ -19,10 +20,28 @@ class Aggragator:
         conn.close()
 
         grouping_attributes = ['constraints_generator', 'clustering', 'margin', 'standardized', 'sigma', 'name', 'k', 'n']
-
+        self.get_info(df)
         df2 = df.groupby(grouping_attributes).apply(self.__get_stats)
         data_frame = self.__expand_dataframes(df2, self.attribute)
         return data_frame
+
+    def get_info(self, df: pd.DataFrame):
+        info = dict()
+
+        def reducer(X):
+            return str(set(X.unique())).replace('\'', '')
+
+        info['margin'] = df['margin'].iloc[0]
+        info['n'] = "{} - {}".format(df['n'].min(), df['n'].max())
+        info['k'] = "{} - {}".format(df['k'].min(), df['k'].max())
+        info['margin'] = df['margin'].iloc[0]
+        info['\sigma'] = df['sigma'].iloc[0]
+        info['standardized'] = reducer(df['standardized'])
+        info['constraints'] = reducer(df['constraints_generator'])
+        info['k_{min}'] = reducer(df['clustering'])
+        info[self.attribute] = reducer(df[self.attribute])
+
+        self.info = info
 
     def __get_stats(self, group):
         results = {

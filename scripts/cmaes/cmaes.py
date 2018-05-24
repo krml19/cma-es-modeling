@@ -25,7 +25,7 @@ class CMAESAlgorithm:
                  scaler: [StandardScaler, None], model_name: str, k: int, n: int, margin: float,
                  x0: np.ndarray = None, benchmark_mode: bool = False, clustering_k_min: int=0, seed: int = 404,
                  db: str = 'experiments', experiment_n: int = 1, draw: bool = False):
-        data_model = DataModel(name=model_name, B=[1] * k, n=n)
+        data_model = DataModel(name=model_name, k=k, n=n, seed=seed)
 
         self.__n_constraints = cg.generate(constraints_generator, n)
         self.__w0 = np.repeat(1, self.__n_constraints)
@@ -85,7 +85,7 @@ class CMAESAlgorithm:
         pr_y = max(pr_y, 1e-6)  # avoid division by 0
 
         # f
-        f = (recall ** 2) / pr_y
+        f = (recall ** 2) / pr_y if recall > 0.0 else -1.0 / pr_y
         f = -f
         log.info("tp: {},\trecall: {},\tp: {},\t pr_y: {},\t\tf: {}".format(tp, recall, p, pr_y, f))
         return f
@@ -280,5 +280,5 @@ class CMAESAlgorithm:
 # n = 3
 # seed = 4
 # algorithm = CMAESAlgorithm(constraints_generator=cg.f_2pn.__name__, sigma0=0.1, k=1,
-#                            scaler=None, margin=1.1, clustering_k_min=0, model_name='cube', n=n, seed=seed, draw=True)
+#                            scaler=None, margin=1.1, clustering_k_min=0, model_name='simplex', n=n, seed=seed, draw=True)
 # algorithm.experiment()

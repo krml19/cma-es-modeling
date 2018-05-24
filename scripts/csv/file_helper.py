@@ -6,9 +6,9 @@ from enum import Enum
 
 
 class Paths(Enum):
-    train = "data/train/"
-    test = "data/test/"
-    valid = "data/valid/"
+    train = "datasets/training"
+    test = "datasets/test"
+    valid = "datasets/validation"
     tables = "latex/tables/"
 
     def path(self, filename: str):

@@ -14,12 +14,19 @@ pm = '\\,$\\pm$\\,'
 
 
 def mappings(value):
-    _mappings = {'f_2n': '2n',
-                'f_2n2': '2n^2',
-                'f_n3': '2n^3',
-                'f_2pn': '2^n'}
-    if value in _mappings.keys():
-        return _mappings[value]
+    if isinstance(value, str):
+        return value.replace('f_2n', '2n')\
+                    .replace('f_2n2', '2n^2')\
+                    .replace('f_n3', '2n^3')\
+                    .replace('f_2pn', '2^n')
+    else:
+        return value
+
+def header_mappings(value):
+    if isinstance(value, str):
+        return value.replace('standardized', 'Standaryzacja')\
+                    .replace('margin', 'Margines')\
+                    .replace('constraints', 'Ograniczenia')
     else:
         return value
 
@@ -80,7 +87,7 @@ class DataTable:
         return bold('problem') + sep + reduce(lambda x, y: x + sep + y, attributes)
 
     def top_caption(self, name, cols):
-        return '\\hline\n \multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=cols, alignment='|c|', name=bold(name))
+        return '\\hline\n \multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=cols, alignment='|c|', name=name)
 
     def concat_row(self, x: pd.Series):
         return self.beautify_name(x.name) + sep + reduce(lambda xi, yi: xi + sep + yi, x)
@@ -103,6 +110,24 @@ class DataTable:
         reduced: str = reduce(lambda x, y: x + y, elements)
 
         return reduced
+
+
+class InfoTable:
+    def __init__(self, info: dict):
+        self.info = info
+
+    def build(self) -> str:
+        reducer = lambda x, y: str(x) + sep + str(y)
+        keys = list(map(lambda x: boldmath(header_mappings(x)), self.info.keys()))
+        values = list(map(lambda x: math(mappings(x)), self.info.values()))
+        header = reduce(reducer, keys)
+        body = reduce(reducer, values)
+
+        return '\\toprule\n' \
+               '{header} \\\\\n' \
+               '\\midrule\n' \
+               '{body} \\\\\n' \
+               '\\bottomrule\n'.format(header=header, body=body)
 
 
 class Component:
@@ -186,6 +211,10 @@ class Tabular(Environment):
             columns = '|l|' + reduce(lambda x, y: x + y, columns)
             self.curly_options.value = columns
             Environment.body.fset(self, value.create_table())
+        elif isinstance(value, InfoTable):
+            columns = 'c' * len(value.info)
+            self.curly_options.value = columns
+            Environment.body.fset(self, value.build())
         else:
             Environment.body.fset(self, value)
 
@@ -205,19 +234,32 @@ def table(experiment: Experiment):
 
     document = tabular.build()
 
+    info_table = InfoTable(info=aggregator.info)
+    info_tabular = Tabular()
+    info_tabular.body = info_table
+
+    info_document = info_tabular.build()
+    print(info_document)
     print(document)
+
     label = 'experiment{}'.format(experiment.experiment)
+    info_label = 'experiment{}-info'.format(experiment.experiment)
+
     if len(sys.argv) > 1:
         write_tex_table(filename=label, data=document, path=sys.argv[1])
+        write_tex_table(filename=info_label, data=info_document, path=sys.argv[1])
     else:
         write_tex_table(filename=label, data=document)
+        write_tex_table(filename=info_label, data=info_document)
 
 
-experiment1 = Experiment(experiment=1, benchmark_mode=False, attribute='standardized', header='Standaryzacja')
-experiment2 = Experiment(experiment=2, benchmark_mode=False, attribute='constraints_generator',  header='Liczba ograniczeń')
-experiment3 = Experiment(experiment=3, benchmark_mode=False, attribute='clustering', header='kmin')
-experiment4 = Experiment(experiment=4, benchmark_mode=False, attribute='sigma', header='sigma')
-experiment5 = Experiment(experiment=5, benchmark_mode=False, attribute='margin', header='Margines')
+
+
+experiment1 = Experiment(experiment=1, benchmark_mode=False, attribute='standardized', header=bold('Standaryzacja'))
+experiment2 = Experiment(experiment=2, benchmark_mode=False, attribute='constraints_generator',  header=bold('Liczba ograniczeń'))
+experiment3 = Experiment(experiment=3, benchmark_mode=False, attribute='clustering', header=boldmath('k_{min}'))
+experiment4 = Experiment(experiment=4, benchmark_mode=False, attribute='sigma', header=boldmath('\sigma'))
+experiment5 = Experiment(experiment=5, benchmark_mode=False, attribute='margin', header=bold('Margines'))
 
 # experiment4 = Experiment(experiment=4, benchmark_mode=False, attribute='standardized', caption='', label='')
 # experiment5 = Experiment(experiment=5, benchmark_mode=False, attribute='standardized', caption='', label='')

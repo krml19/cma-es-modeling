@@ -107,6 +107,7 @@ ENV/
 # project specific
 data/
 drawings/
+datasets/
 
 # db
 *.sqlite
