@@ -2,7 +2,7 @@ from collections import namedtuple
 import pandas as pd
 from functools import reduce
 from scripts.utils.aggregations import Aggragator
-from scripts.csv.file_helper import write_tex_table
+from file_helper import write_tex_table
 import sys
 
 eol = '\n'

@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
 
-from scripts.benchmarks.ball import Ball
-from scripts.benchmarks.cube import Cube
-from scripts.benchmarks.simplex import Simplex
-from scripts.benchmarks.benchmark_model import BenchmarkModel
-from scripts.csv.file_helper import Paths
+from ball import Ball
+from cube import Cube
+from simplex import Simplex
+from benchmark_model import BenchmarkModel
+from file_helper import Paths
 
 
 class DataModel:

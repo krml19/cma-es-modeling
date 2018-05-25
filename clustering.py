@@ -3,7 +3,7 @@ from pyclustering.cluster.xmeans import xmeans, splitting_type
 from pyclustering.utils import timedcall
 
 import numpy as np
-from scripts.utils.logger import Logger
+from logger import Logger
 from sklearn.cluster import KMeans
 
 '''

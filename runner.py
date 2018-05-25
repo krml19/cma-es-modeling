@@ -1,10 +1,9 @@
-from scripts.cmaes.cmaes import CMAESAlgorithm
+from cmaes import CMAESAlgorithm
 from sklearn.preprocessing import StandardScaler
-import numpy as np
 from multiprocessing import Pool
-from scripts.utils.experimentdatabase import Database
-from scripts.utils.logger import Logger
-import scripts.utils.constraints_generator as cg
+from experimentdatabase import Database
+from logger import Logger
+import constraints_generator as cg
 
 log = Logger(name='runner')
 

@@ -1,7 +1,5 @@
-from scripts.benchmarks.benchmark_model import BenchmarkModel
-from scripts.benchmarks.constraint import Operator, Constraint, Constraints
-from scripts.drawer import draw
-import numpy as np
+from benchmark_model import BenchmarkModel
+from constraint import Operator, Constraint, Constraints
 
 
 class Cube(BenchmarkModel):

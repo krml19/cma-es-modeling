@@ -1,9 +1,9 @@
 import numpy as np
 
-from scripts.utils import sampler
+import sampler
 import pandas as pd
-from scripts.csv import file_helper as fh
-from scripts.utils.logger import Logger
+import file_helper as fh
+from logger import Logger
 
 
 class BenchmarkModel:

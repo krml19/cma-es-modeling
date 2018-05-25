@@ -1,8 +1,6 @@
-from scripts.benchmarks.benchmark_model import BenchmarkModel
-from scripts.benchmarks.constraint import Operator, Constraint, Constraints
+from benchmark_model import BenchmarkModel
+from constraint import Operator, Constraint, Constraints
 import numpy as np
-from scripts.drawer import draw
-from scripts.utils.logger import Logger
 
 
 class Simplex(BenchmarkModel):

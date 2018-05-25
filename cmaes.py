@@ -4,15 +4,14 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from functools import reduce
 
-from scripts.benchmarks.data_model import DataModel
-from scripts.drawer import draw
-from scripts.utils.experimentdatabase import Experiment, Database
-from scripts.utils.logger import Logger
-from scripts.utils.sampler import bounding_sphere
-from scripts.utils.clustering import xmeans_clustering
+from data_model import DataModel
+import draw
+from experimentdatabase import Database
+from logger import Logger
+from sampler import bounding_sphere
+from clustering import xmeans_clustering
 from sklearn.metrics import confusion_matrix
-from scripts.benchmarks.benchmark_model import BenchmarkModel
-import scripts.utils.constraints_generator as cg
+import constraints_generator as cg
 log = Logger(name='cma-es')
 
 def to_str(w: [list, np.ndarray]):
