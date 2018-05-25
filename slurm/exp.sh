@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH -p lab-ci-student,lab-43-student,lab-44-student
-#SBATCH -x lab-al-9-student
+#SBATCH -p lab-ci,lab-43,lab-44
+#SBATCH -x lab-al-9
 #SBATCH -c 1 --mem=1475
 #SBATCH -t 22:00:00
 #SBATCH -Q
