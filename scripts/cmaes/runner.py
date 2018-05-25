@@ -55,7 +55,7 @@ class AlgorithmRunner:
                     clustering_k_min: int = 0, benchmark_mode: bool = False, db: str = 'experiments', experiment_n: int = 1):
 
         experiments = []
-        np.std()
+
         # FIXME: Changes ranges
         for k in range(1, 3):
             for n in range(2, 5):
@@ -116,4 +116,5 @@ class AlgorithmRunner:
 
 runner = AlgorithmRunner()
 experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
-runner.run(experiments)
+# runner.run(experiments)
+print(flat(runner.experiments_1())[0])
