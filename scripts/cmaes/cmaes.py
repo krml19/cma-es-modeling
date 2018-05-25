@@ -251,7 +251,7 @@ class CMAESAlgorithm:
             experiment['f'] = final_results['f']
 
             for i, es in enumerate(self.__results):
-                es: cma.CMAEvolutionStrategy = es
+                es = es
 
                 W_start = self.split_w(es.x0, split_w=True)
                 W = self.split_w(es.best.x, split_w=True)
