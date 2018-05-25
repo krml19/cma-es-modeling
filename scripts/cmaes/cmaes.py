@@ -277,8 +277,8 @@ class CMAESAlgorithm:
     #              self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
 
 
-# n = 3
-# seed = 4
-# algorithm = CMAESAlgorithm(constraints_generator=cg.f_2pn.__name__, sigma0=0.1, k=1,
-#                            scaler=None, margin=1.1, clustering_k_min=0, model_name='simplex', n=n, seed=seed, draw=True)
-# algorithm.experiment()
+n = 3
+seed = 4
+algorithm = CMAESAlgorithm(constraints_generator=cg.f_2pn.__name__, sigma0=0.1, k=1,
+                           scaler=None, margin=1.1, clustering_k_min=0, model_name='simplex', n=n, seed=seed, draw=True)
+algorithm.experiment()
