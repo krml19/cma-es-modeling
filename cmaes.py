@@ -12,6 +12,8 @@ from sampler import bounding_sphere
 from clustering import xmeans_clustering
 from sklearn.metrics import confusion_matrix
 import constraints_generator as cg
+import sys
+
 log = Logger(name='cma-es')
 
 def to_str(w: [list, np.ndarray]):
@@ -86,7 +88,7 @@ class CMAESAlgorithm:
         # f
         f = (recall ** 2) / pr_y if recall > 0.0 else -1.0 / pr_y
         f = -f
-        log.info("tp: {},\trecall: {},\tp: {},\t pr_y: {},\t\tf: {}".format(tp, recall, p, pr_y, f))
+        # log.info("tp: {},\trecall: {},\tp: {},\t pr_y: {},\t\tf: {}".format(tp, recall, p, pr_y, f))
         return f
 
     def best_results(self):
@@ -122,7 +124,7 @@ class CMAESAlgorithm:
         pr_y = max(pr_y, 1e-6)  # avoid division by 0
 
         # f
-        f = (recall ** 2) / pr_y
+        f = (recall ** 2) / pr_y if recall > 0.0 else -1.0 / pr_y
         f = -f
 
         log.info('Y pred: {}, true: {}, ratio: {}'.format(y_pred.sum(), y_true.sum(), y_pred.sum() / y_true.sum()))
@@ -164,11 +166,11 @@ class CMAESAlgorithm:
         while not es.stop():
             W = es.ask()
             es.tell(W, [self.__objective_function(w) for w in W])
-            es.logger.add()
+            # es.logger.add()
 
-            es.disp()  # by default sparse, see option verb_disp
+            # es.disp()  # by default sparse, see option verb_disp
 
-            log.debug(es.result)
+            # log.debug(es.result)
 
         log.debug("Best: {}, w: {}".format(es.best.f, es.best.x))
         if self.draw:
@@ -281,3 +283,10 @@ class CMAESAlgorithm:
 # algorithm = CMAESAlgorithm(constraints_generator=cg.f_2pn.__name__, sigma0=0.1, k=1,
 #                            scaler=None, margin=1.1, clustering_k_min=0, model_name='simplex', n=n, seed=seed, draw=True)
 # algorithm.experiment()
+
+if len(sys.argv) > 1:
+    argv1 = sys.argv[1].replace('\'', '').replace(' ', '').replace('{', '').replace('}', '').split(",")
+    args = dict(e.split(":") for e in argv1)
+
+    algorithm = CMAESAlgorithm(**args)
+    algorithm.experiment()

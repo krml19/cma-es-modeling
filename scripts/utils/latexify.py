@@ -26,7 +26,9 @@ def header_mappings(value):
     if isinstance(value, str):
         return value.replace('standardized', 'Standaryzacja')\
                     .replace('margin', 'Margines')\
-                    .replace('constraints', 'Ograniczenia')
+                    .replace('constraints_generator', 'Ograniczenia')\
+                    .replace('sigma', '\sigma')\
+                    .replace('clustering', 'k_{min}')
     else:
         return value
 

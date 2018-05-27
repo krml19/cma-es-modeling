@@ -35,11 +35,12 @@ class Aggragator:
         info['n'] = "{} - {}".format(df['n'].min(), df['n'].max())
         info['k'] = "{} - {}".format(df['k'].min(), df['k'].max())
         info['margin'] = df['margin'].iloc[0]
-        info['\sigma'] = df['sigma'].iloc[0]
+        info['sigma'] = df['sigma'].iloc[0]
         info['standardized'] = reducer(df['standardized'])
-        info['constraints'] = reducer(df['constraints_generator'])
-        info['k_{min}'] = reducer(df['clustering'])
+        info['constraints_generator'] = reducer(df['constraints_generator'])
+        info['clustering'] = reducer(df['clustering'])
         info[self.attribute] = reducer(df[self.attribute])
+        info['seed'] = reducer(df['seed'])
 
         self.info = info
 

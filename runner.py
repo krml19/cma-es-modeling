@@ -4,12 +4,47 @@ from multiprocessing import Pool
 from experimentdatabase import Database
 from logger import Logger
 import constraints_generator as cg
+import os
+import subprocess
 
 log = Logger(name='runner')
 
 
 def flat(l):
     return [item for sublist in l for item in sublist]
+
+
+class SlurmPool:
+    def __init__(self):
+        try:
+            os.makedirs("./scripts")
+        except:
+            None
+        self.run = open("./run.sh", "w")
+        self.run.write("#!/bin/bash\n")
+        self.run.write("export PATH=\"/home/inf116360/anaconda3/bin:$PATH\"\n")
+
+    def execute(self, cmd, arguments, script_filename):
+        sbatch = open("./scripts/%s.sh" % script_filename, "w")
+        sbatch.write("#!/bin/bash\n")
+        sbatch.write("#SBATCH -p lab-ci,lab-43,lab-44\n")
+        sbatch.write("#SBATCH -x lab-al-9\n")
+        sbatch.write("#SBATCH -c 1 --mem=1475\n")
+        sbatch.write("#SBATCH -t 22:00:00\n")
+        sbatch.write("#SBATCH -Q\n")
+        sbatch.write("date\n")
+        sbatch.write("hostname\n")
+        sbatch.write("echo %s %s\n" % (cmd, arguments))
+        sbatch.write("srun %s %s && srun rm \"./scripts/%s.sh\"\n" % (cmd, arguments, script_filename))
+        sbatch.close()
+
+        self.run.write("sbatch \"./scripts/%s.sh\"\n" % script_filename)
+
+    def close(self):
+        self.run.close()
+
+        ps = subprocess.Popen(["/bin/sh", "./run.sh"])
+        ps.wait()
 
 
 class AlgorithmRunner:
@@ -55,11 +90,10 @@ class AlgorithmRunner:
 
         experiments = []
 
-        # FIXME: Changes ranges
         for k in range(1, 3):
-            for n in range(2, 5):
+            for n in range(2, 8):
                 for model in ['ball', 'simplex', 'cube']:
-                    for seed in range(1, 5):
+                    for seed in range(0, 30):
                         inopts = dict()
                         inopts['constraints_generator'] = constraints_generator.__name__
                         inopts['sigma0'] = sigma0
@@ -103,7 +137,6 @@ class AlgorithmRunner:
         algorithm.experiment()
 
     def run(self, experiments: list):
-
         experiments = flat(experiments)
         db = experiments[0]['db'] + '.sqlite'
         database = Database(database_filename=db)
@@ -112,8 +145,25 @@ class AlgorithmRunner:
         pool = Pool(processes=4)  # start 4 worker processes
         pool.map(self.run_instance, experiments)
 
+    def run_slurm(self, experiments: list):
+        experiments = flat(experiments)
+        db = experiments[0]['db'] + '.sqlite'
+        database = Database(database_filename=db)
+        experiments = self.filter_algorithms(experiments, database=database)
+
+        pool = SlurmPool()
+        for experiment in experiments:
+            try:
+                pool.execute(cmd='python', arguments='./cma-es-modeling/cma-es {}'.format(str(experiment)), script_filename=str(self.convert_to_sql_params(experiment)))
+            except:
+                print(experiment)
+
+        pool.close()
+
+
+
 
 runner = AlgorithmRunner()
 experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
 # runner.run(experiments)
-print(flat(runner.experiments_1())[0])
+runner.run_slurm(experiments)
