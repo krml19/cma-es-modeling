@@ -93,9 +93,9 @@ class AlgorithmRunner:
         experiments = []
 
         for k in range(1, 3):
-            for n in range(2, 3):
+            for n in range(2, 8):
                 for model in ['ball', 'simplex', 'cube']:
-                    for seed in range(0, 4):
+                    for seed in range(0, 30):
                         inopts = dict()
                         inopts['constraints_generator'] = constraints_generator.__name__
                         inopts['sigma0'] = sigma0
@@ -176,7 +176,7 @@ class AlgorithmRunner:
 
 if __name__ == '__main__':
     runner = AlgorithmRunner()
-    # experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
-    experiments = runner.experiments_1()
-    runner.run(experiments)
-    # runner.run_slurm(experiments)
+    experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
+    # experiments = runner.experiments_1()
+    # runner.run(experiments)
+    runner.run_slurm(experiments)
