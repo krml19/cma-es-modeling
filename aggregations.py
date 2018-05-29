@@ -1,8 +1,9 @@
 import pandas as pd
 import sqlite3
-from sklearn.preprocessing import MinMaxScaler, QuantileTransformer
+from sklearn.preprocessing import QuantileTransformer
 import scipy.stats as stats
-import numpy as np
+import runner
+
 
 class Aggragator:
     def __init__(self, experiment: int, attribute: str, benchmark_mode: bool = False):
@@ -14,10 +15,13 @@ class Aggragator:
         self.info = None
 
     def transform(self) -> pd.DataFrame:
-        sql = "SELECT * FROM experiments WHERE benchmark_mode={} AND experiment_n={}".format(self.benchmark_mode, self.experiment)
-        conn = sqlite3.connect("experiments.sqlite")
-        df = pd.read_sql_query(sql, conn)
-        conn.close()
+        algorithm_runner = runner.AlgorithmRunner()
+        sql = "SELECT * FROM experiments WHERE constraints_generator=? AND margin=? AND sigma=? AND k=? AND n=? AND seed=? AND name=? AND clustering=? AND standardized=?"
+        connection = sqlite3.connect("experiments.sqlite")
+        queries = runner.flat(algorithm_runner.experiment(self.experiment))
+        df = pd.concat([pd.read_sql_query(sql=sql, params=algorithm_runner.convert_to_sql_params(q), con=connection) for q in queries])
+
+        connection.close()
 
         grouping_attributes = ['constraints_generator', 'clustering', 'margin', 'standardized', 'sigma', 'name', 'k', 'n']
         self.get_info(df)

@@ -1,5 +1,4 @@
 from cmaes import CMAESAlgorithm
-from sklearn.preprocessing import StandardScaler
 from multiprocessing import Pool
 from experimentdatabase import Database
 from logger import Logger
@@ -52,7 +51,7 @@ class AlgorithmRunner:
 
     @property
     def sql(self):
-        return "SELECT count(*) FROM experiments WHERE constraints_generator=? AND margin=? AND sigma=? AND k=? AND n=? AND seed=? AND name=? AND clustering=? AND standardized=? AND experiment_n=?"
+        return "SELECT count(*) FROM experiments WHERE constraints_generator=? AND margin=? AND sigma=? AND k=? AND n=? AND seed=? AND name=? AND clustering=? AND standardized=?"
 
     def check_if_table_is_empty(self, database: Database):
         check_if_table_exists = database.engine.execute("SELECT count(*) FROM main.experiments").fetchone()[0]
@@ -85,18 +84,16 @@ class AlgorithmRunner:
                 algorithm_params['seed'],
                 algorithm_params['model_name'],
                 algorithm_params['clustering_k_min'],
-                algorithm_params['scaler'],
-                algorithm_params['experiment_n'])
+                algorithm_params['scaler'])
 
     def data_source(self, constraints_generator: callable = cg.f_2n, sigma0: float = 0.5,
                     margin: float = 1.1, scaler: bool = False,
-                    clustering_k_min: int = 0, benchmark_mode: bool = False, db: str = 'experiments',
-                    experiment_n: int = 1):
+                    clustering_k_min: int = 0, benchmark_mode: bool = False):
 
         experiments = []
 
         for k in range(1, 3):
-            for n in range(2, 8):
+            for n in range(2, 3):
                 for model in ['ball', 'simplex', 'cube']:
                     for seed in range(0, 4):
                         inopts = dict()
@@ -110,8 +107,6 @@ class AlgorithmRunner:
                         inopts['seed'] = seed
                         inopts['model_name'] = model
                         inopts['benchmark_mode'] = benchmark_mode
-                        inopts['db'] = db
-                        inopts['experiment_n'] = experiment_n
                         experiments.append(inopts)
         return experiments
 
@@ -119,31 +114,41 @@ class AlgorithmRunner:
         return [self.data_source(scaler=scaler) for scaler in [True, False]]
 
     def experiments_2(self) -> list:
-        return [self.data_source(constraints_generator=constraints_generator, experiment_n=2) for
+        return [self.data_source(constraints_generator=constraints_generator) for
                 constraints_generator in [cg.f_2n, cg.f_2n2, cg.f_n3, cg.f_2pn]]
 
     def experiments_3(self) -> list:
-        return [self.data_source(clustering_k_min=kmin, experiment_n=3) for kmin in [0, 1, 2]]
+        return [self.data_source(clustering_k_min=kmin) for kmin in [0, 1, 2]]
 
     def experiments_4(self) -> list:
-        return [self.data_source(sigma0=sigma, experiment_n=4) for sigma in [0.125, 0.25, 0.5, 1]]
+        return [self.data_source(sigma0=sigma) for sigma in [0.125, 0.25, 0.5, 1]]
 
     def experiments_5(self) -> list:
-        return [self.data_source(margin=margin, experiment_n=5) for margin in [0.9, 1, 1.1]]
+        return [self.data_source(margin=margin) for margin in [0.9, 1, 1.1]]
 
     def benchmarks(self) -> list:
-        return [self.data_source(benchmark_mode=True, db='benchmarks')]
+        return [self.data_source(benchmark_mode=True)]
+
+    def experiment(self, key):
+        return {
+            1: self.experiments_1(),
+            2: self.experiments_2(),
+            3: self.experiments_3(),
+            4: self.experiments_4(),
+            5: self.experiments_5(),
+            'benchmarks': self.benchmarks()
+        }[key]
 
     def run_instance(self, inopts: dict):
         try:
             algorithm = CMAESAlgorithm(**inopts)
             algorithm.experiment()
         except:
-            print("Error: {}".format(inopts))
+            log.info("Error: {}".format(inopts))
 
     def run(self, experiments: list):
         experiments = flat(experiments)
-        db = experiments[0]['db'] + '.sqlite'
+        db = 'experiments.sqlite'
         database = Database(database_filename=db)
         experiments = self.filter_algorithms(experiments, database=database)
 
@@ -152,14 +157,14 @@ class AlgorithmRunner:
 
     def run_slurm(self, experiments: list):
         experiments = flat(experiments)
-        db = experiments[0]['db'] + '.sqlite'
+        db = 'experiments.sqlite'
         database = Database(database_filename=db)
         experiments = self.filter_algorithms(experiments, database=database)
 
         pool = SlurmPool()
         for experiment in experiments:
             try:
-                mapped = mapped = list(map(lambda item: item[0] + ':' + str(item[1]), experiment.items()))
+                mapped = list(map(lambda item: item[0] + ':' + str(item[1]), experiment.items()))
                 arguments = reduce(lambda key, value: key + ';' + value, mapped)
                 pool.execute(cmd='python', arguments='./cma-es-modeling/cma-es {}'.format(arguments),
                              script_filename=str(self.convert_to_sql_params(experiment)))
@@ -169,8 +174,9 @@ class AlgorithmRunner:
         pool.close()
 
 
-runner = AlgorithmRunner()
-# experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
-experiments = runner.experiments_2()
-# runner.run(experiments)
-runner.run_slurm(experiments)
+if __name__ == '__main__':
+    runner = AlgorithmRunner()
+    # experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
+    experiments = runner.experiments_1()
+    runner.run(experiments)
+    # runner.run_slurm(experiments)

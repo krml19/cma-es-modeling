@@ -23,9 +23,9 @@ def to_str(w: [list, np.ndarray]):
 class CMAESAlgorithm:
 
     def __init__(self, constraints_generator: str, sigma0: float,
-                 scaler: [StandardScaler, None], model_name: str, k: int, n: int, margin: float,
+                 scaler: bool, model_name: str, k: int, n: int, margin: float,
                  x0: np.ndarray = None, benchmark_mode: bool = False, clustering_k_min: int=0, seed: int = 404,
-                 db: str = 'experiments', experiment_n: int = 1, draw: bool = False):
+                 db: str = 'experiments', draw: bool = False):
         data_model = DataModel(name=model_name, k=k, n=n, seed=seed)
 
         self.__n_constraints = cg.generate(constraints_generator, n)
@@ -38,7 +38,7 @@ class CMAESAlgorithm:
         self.__constraints_generator = constraints_generator
 
         self.__sigma0 = sigma0
-        self.__scaler = scaler
+        self.__scaler = StandardScaler() if scaler else None
         self.__data_model = data_model
         self.__margin = margin
         self.matches_constraints = data_model.benchmark_model.benchmark_objective_function if benchmark_mode else self.satisfies_constraints
@@ -46,12 +46,11 @@ class CMAESAlgorithm:
         self.__results = list()
         self.__seed = seed
         self.db = db
-        self.experiment_n = experiment_n
         self.benchmark_mode = benchmark_mode
         self.draw = draw
 
 
-        if scaler is not None:
+        if self.__scaler is not None:
             self.__scaler.fit(self.__train_X)
             self.__train_X = self.__scaler.transform(self.__train_X)
             self.__valid_X = self.__scaler.transform(self.__valid_X)
@@ -231,7 +230,6 @@ class CMAESAlgorithm:
         experiment = database.new_experiment()
 
         try:
-            experiment['experiment_n'] = self.experiment_n
             experiment['benchmark_mode'] = self.benchmark_mode
             experiment['seed'] = self.__seed
             experiment['n_constraints'] = self.__n_constraints
@@ -266,16 +264,15 @@ class CMAESAlgorithm:
 
         except Exception as e:
             experiment['error'] = e
+            log.debug("Cannot process: {}".format(self.sql_params))
         finally:
             experiment.save()
-            # log.debug("Finished with f: {} and params: {}".format(final_results['f'], self.sql_params))
 
-
-    # @property
-    # def sql_params(self):
-    #     return (self.__n_constraints, self.__margin, self.__sigma0, self.__data_model.benchmark_model.k,
-    #              self.__data_model.benchmark_model.i, self.__seed,
-    #              self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
+    @property
+    def sql_params(self):
+        return (self.__n_constraints, self.__margin, self.__sigma0, self.__data_model.benchmark_model.k,
+                 self.__data_model.benchmark_model.i, self.__seed,
+                 self.__data_model.benchmark_model.name, self.__clustering, self.__scaler)
 
 
 # n = 3
@@ -284,20 +281,19 @@ class CMAESAlgorithm:
 #                            scaler=None, margin=1.1, clustering_k_min=0, model_name='simplex', n=n, seed=seed, draw=True)
 # algorithm.experiment()
 
-if len(sys.argv) > 1:
-    argv1 = sys.argv[1].split(';')
-    args = dict(e.split(":") for e in argv1)
-    args['k'] = int(args['k'])
-    args['n'] = int(args['n'])
-    args['sigma0'] = float(args['sigma0'])
-    args['scaler'] = args['scaler'] == True
-    args['margin'] = float(args['margin'])
-    args['clustering_k_min'] = int(args['clustering_k_min'])
-    args['seed'] = int(args['seed'])
-    args['benchmark_mode'] = args['benchmark_mode'] == True
-    args['experiment_n'] = int(args['experiment_n'])
+if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        argv1 = sys.argv[1].split(';')
+        args = dict(e.split(":") for e in argv1)
+        args['k'] = int(args['k'])
+        args['n'] = int(args['n'])
+        args['sigma0'] = float(args['sigma0'])
+        args['scaler'] = args['scaler'] == True
+        args['margin'] = float(args['margin'])
+        args['clustering_k_min'] = int(args['clustering_k_min'])
+        args['seed'] = int(args['seed'])
+        args['benchmark_mode'] = args['benchmark_mode'] == True
+        args['experiment_n'] = int(args['experiment_n'])
 
-    args['scaler'] = StandardScaler() if args['scaler'] else None
-
-    algorithm = CMAESAlgorithm(**args)
-    algorithm.experiment()
+        algorithm = CMAESAlgorithm(**args)
+        algorithm.experiment()
