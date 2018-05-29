@@ -285,8 +285,19 @@ class CMAESAlgorithm:
 # algorithm.experiment()
 
 if len(sys.argv) > 1:
-    argv1 = sys.argv[1].replace('\'', '').replace(' ', '').replace('{', '').replace('}', '').split(",")
+    argv1 = sys.argv[1].split(';')
     args = dict(e.split(":") for e in argv1)
+    args['k'] = int(args['k'])
+    args['n'] = int(args['n'])
+    args['sigma0'] = float(args['sigma0'])
+    args['scaler'] = args['scaler'] == True
+    args['margin'] = float(args['margin'])
+    args['clustering_k_min'] = int(args['clustering_k_min'])
+    args['seed'] = int(args['seed'])
+    args['benchmark_mode'] = args['benchmark_mode'] == True
+    args['experiment_n'] = int(args['experiment_n'])
+
+    args['scaler'] = StandardScaler() if args['scaler'] else None
 
     algorithm = CMAESAlgorithm(**args)
     algorithm.experiment()

@@ -6,6 +6,7 @@ from logger import Logger
 import constraints_generator as cg
 import os
 import subprocess
+from functools import reduce
 
 log = Logger(name='runner')
 
@@ -51,10 +52,10 @@ class AlgorithmRunner:
 
     @property
     def sql(self):
-        return "select count(*) from experiments where constraints_generator=? and margin=? and sigma=? and k=? and n=? and seed=? and name=? and clustering=? and standardized=? and experiment_n=?"
+        return "SELECT count(*) FROM experiments WHERE constraints_generator=? AND margin=? AND sigma=? AND k=? AND n=? AND seed=? AND name=? AND clustering=? AND standardized=? AND experiment_n=?"
 
     def check_if_table_is_empty(self, database: Database):
-        check_if_table_exists = database.engine.execute("select count(*) from main.experiments").fetchone()[0]
+        check_if_table_exists = database.engine.execute("SELECT count(*) FROM main.experiments").fetchone()[0]
         return check_if_table_exists > 0
 
     def filter_algorithms(self, experiments: list, database: Database) -> list:
@@ -84,12 +85,13 @@ class AlgorithmRunner:
                 algorithm_params['seed'],
                 algorithm_params['model_name'],
                 algorithm_params['clustering_k_min'],
-                algorithm_params['scaler'] is not None,
+                algorithm_params['scaler'],
                 algorithm_params['experiment_n'])
 
     def data_source(self, constraints_generator: callable = cg.f_2n, sigma0: float = 0.5,
-                    margin: float = 1.1, scaler: [StandardScaler, None] = None,
-                    clustering_k_min: int = 0, benchmark_mode: bool = False, db: str = 'experiments', experiment_n: int = 1):
+                    margin: float = 1.1, scaler: bool = False,
+                    clustering_k_min: int = 0, benchmark_mode: bool = False, db: str = 'experiments',
+                    experiment_n: int = 1):
 
         experiments = []
 
@@ -114,14 +116,11 @@ class AlgorithmRunner:
         return experiments
 
     def experiments_1(self) -> list:
-        return [self.data_source(scaler=scaler) for scaler in [None, StandardScaler()]]
-
-    def experiments_1_train(self) -> list:
-        return [self.data_source(scaler=scaler, db='train') for scaler in [None, StandardScaler()]]
+        return [self.data_source(scaler=scaler) for scaler in [True, False]]
 
     def experiments_2(self) -> list:
         return [self.data_source(constraints_generator=constraints_generator, experiment_n=2) for
-                       constraints_generator in [cg.f_2n, cg.f_2n2, cg.f_n3, cg.f_2pn]]
+                constraints_generator in [cg.f_2n, cg.f_2n2, cg.f_n3, cg.f_2pn]]
 
     def experiments_3(self) -> list:
         return [self.data_source(clustering_k_min=kmin, experiment_n=3) for kmin in [0, 1, 2]]
@@ -160,17 +159,18 @@ class AlgorithmRunner:
         pool = SlurmPool()
         for experiment in experiments:
             try:
-                pool.execute(cmd='python', arguments='./cma-es-modeling/cma-es {}'.format(str(experiment)), script_filename=str(self.convert_to_sql_params(experiment)))
+                mapped = mapped = list(map(lambda item: item[0] + ':' + str(item[1]), experiment.items()))
+                arguments = reduce(lambda key, value: key + ';' + value, mapped)
+                pool.execute(cmd='python', arguments='./cma-es-modeling/cma-es {}'.format(arguments),
+                             script_filename=str(self.convert_to_sql_params(experiment)))
             except:
                 print(experiment)
 
         pool.close()
 
 
-
-
 runner = AlgorithmRunner()
 # experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
 experiments = runner.experiments_2()
-runner.run(experiments)
-# runner.run_slurm(experiments)
+# runner.run(experiments)
+runner.run_slurm(experiments)
