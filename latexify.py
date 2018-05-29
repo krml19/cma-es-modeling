@@ -1,7 +1,7 @@
 from collections import namedtuple
 import pandas as pd
 from functools import reduce
-from scripts.utils.aggregations import Aggragator
+from aggregations import Aggragator
 from file_helper import write_tex_table
 import sys
 
@@ -28,7 +28,8 @@ def header_mappings(value):
                     .replace('margin', 'Margines')\
                     .replace('constraints_generator', 'Ograniczenia')\
                     .replace('sigma', '\sigma')\
-                    .replace('clustering', 'k_{min}')
+                    .replace('clustering', 'k_{min}') \
+                    .replace('total_experiments', 'Total')
     else:
         return value
 
@@ -54,7 +55,7 @@ def row(text):
 
 
 class DataTable:
-    decimals = 5
+    decimals = 2
 
     def __init__(self, data: pd.DataFrame, top_header_name: str, attribute: str, attribute_values: list):
         self.cols = len(attribute_values)
@@ -78,8 +79,8 @@ class DataTable:
         return unstucked
 
     def map_to_color(self, x: float) -> str:
-        return '{},{},{}'.format(x, 1 - x, 0)
-        # return '{},{},{}'.format(1 - x, x, 0)
+        # return '{},{},{}'.format(x, 1 - x, 0)
+        return '{},{},{}'.format(1 - x, x, 0)
 
     def map_to_cell(self, norm_rank: float, value: float, error: float) -> str:
         return '\cellcolor[rgb]{{{color}}} {value} {pm} {error}'.format(color=self.map_to_color(norm_rank), value=value, pm=pm, error=error)
@@ -253,8 +254,6 @@ def table(experiment: Experiment):
     else:
         write_tex_table(filename=label, data=document)
         write_tex_table(filename=info_label, data=info_document)
-
-
 
 
 experiment1 = Experiment(experiment=1, benchmark_mode=False, attribute='standardized', header=bold('Standaryzacja'))

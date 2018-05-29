@@ -4,7 +4,7 @@ from matplotlib import gridspec
 from matplotlib.patches import Ellipse
 from matplotlib.patches import Polygon
 from mpl_toolkits.mplot3d import axes3d, Axes3D
-
+import pandas as pd
 
 def draw2d(df, selected=[0, 1], constraints=None, title=None):
     fig = plt.figure(figsize=(8, 12))
@@ -13,7 +13,10 @@ def draw2d(df, selected=[0, 1], constraints=None, title=None):
     plt.show()
 
 
-def draw2dset(ax, df, selected=[0, 1], constraints=None, title=None):
+def draw2dset(df, ax=None, selected=[0, 1], constraints=None, title=None):
+    if ax is None:
+        fig = plt.figure(figsize=(8, 12))
+        ax = fig.add_subplot(111)
     ax.set_aspect('equal', 'box')
     red = (1.0, 0.0, 0.0, 0.1)
     green = (0.0, 1.0, 0.0, 0.5)
@@ -37,7 +40,10 @@ def draw2dset(ax, df, selected=[0, 1], constraints=None, title=None):
     # plt.show()
 
 
-def draw3dset(ax, df, selected=[0, 1, 2], constraints=None, title=None):
+def draw3dset(df, ax=None, selected=[0, 1, 2], constraints=None, title=None):
+    if ax is None:
+        fig = plt.figure(figsize=(8, 12))
+        ax = fig.add_subplot(111)
     ax.set_aspect('equal', 'box')
     red = (1.0, 0.0, 0.0, 0.1)
     green = (0.0, 1.0, 0.0, 0.5)
@@ -194,6 +200,53 @@ def draw_ellipse3d(ax):
         ax.add_patch(ellipse)
 
 
+def draw_df(filename: str):
+    df = pd.read_csv(filename)
+
+    n = df.shape[1]
+    if n > 3 or n < 2:
+        print("Cannot draw.")
+        return
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d') if n == 3 else fig.add_subplot(111)
+
+    red = (1.0, 0.0, 0.0, 0.1)
+    green = (0.0, 1.0, 0.0, 0.5)
+    blue = (0.0, 0.0, 1.0, 0.5)
+
+    colors = green
+    sizes = 1
+
+    if n == 2:
+        draw2d_df(df, ax, colors, sizes)
+    elif n == 3:
+        draw3d_df(df, ax, colors, sizes)
+    title = filename.split('/')[-1].split('_')
+    title = "{name} [k={k}, n={n}]".format(name=title[1], k=title[2], n=title[3])
+    ax.set_title(title)
+
+    plt.show()
+
+
+def draw2d_df(df, ax, colors, sizes):
+    x_1 = df.columns[0]
+    x_2 = df.columns[1]
+    ax.scatter(x=df[x_1].values, y=df[x_2].values, c=colors, s=sizes)
+
+    ax.set_xlabel(x_1)
+    ax.set_ylabel(x_2)
+
+
+def draw3d_df(df, ax, colors, sizes):
+    x_1 = df.columns[0]
+    x_2 = df.columns[1]
+    x_3 = df.columns[2]
+    ax.scatter(xs=df[x_1].values, ys=df[x_2].values, zs=df[x_3].values, c=colors, s=sizes)
+
+    ax.set_xlabel(x_1)
+    ax.set_ylabel(x_2)
+    ax.set_zlabel(x_3)
 
 # fig = plt.figure()
 # ax = fig.add_subplot(111, projection='3d')

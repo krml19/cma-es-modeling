@@ -1,8 +1,8 @@
 import pandas as pd
 import sqlite3
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, QuantileTransformer
 import scipy.stats as stats
-from functools import reduce
+import numpy as np
 
 class Aggragator:
     def __init__(self, experiment: int, attribute: str, benchmark_mode: bool = False):
@@ -41,13 +41,14 @@ class Aggragator:
         info['clustering'] = reducer(df['clustering'])
         info[self.attribute] = reducer(df[self.attribute])
         info['seed'] = reducer(df['seed'])
+        info['total_experiments'] = df.shape[0]
 
         self.info = info
 
     def __get_stats(self, group):
         results = {
             'f_mean': group['f'].mean() * -1,
-            'f_sem': group['f'].sem(ddof=0) * stats.norm.ppf(q=0.975),
+            'f_sem': group['f'].sem(ddof=1) * stats.norm.ppf(q=0.975),
             'tp_mean': group['tp'].mean(),
             'tn_mean': group['tn'].mean(),
             'fp_mean': group['fp'].mean(),
@@ -65,11 +66,12 @@ class Aggragator:
         }
         return pd.Series(results, name='metrics')
 
-    def __normalize(self, df):
-        scaler = MinMaxScaler()
-        scaler.fit(df.values.reshape(-1, 1))
-        df = df.applymap(lambda x: scaler.transform(x)[0][0])
-        return df
+    def __normalize(self, series: pd.Series):
+        # series = series.applymap(lambda x: np.log(1+x))
+        scaler = QuantileTransformer()
+        scaler.fit(series.values.reshape(-1, 1))
+        series = series.applymap(lambda x: scaler.transform(x)[0][0])
+        return series
 
     def __expand_dataframes(self, df2, ranking_attribute: str):
         data_frame: pd.DataFrame = df2.groupby(['model', ranking_attribute])[['f_mean', 'f_sem']].mean().unstack()
@@ -79,7 +81,7 @@ class Aggragator:
         data_frame[rank_keys] = data_frame['f_mean'].rank(axis=1, ascending=False)
 
         rank_norm_keys = [('rank_norm', key) for key in self.attribute_values]
-        data_frame[rank_norm_keys] = self.__normalize(data_frame['rank'])
+        data_frame[rank_norm_keys] = self.__normalize(data_frame['f_mean'])
 
         return data_frame
 

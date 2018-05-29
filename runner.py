@@ -65,11 +65,14 @@ class AlgorithmRunner:
         db_experiments = [database.engine.execute(self.sql, params).fetchone()[0] for params in seq_of_params]
         filtered = list()
 
+        existing = 0
         for exists, algorithm in zip(db_experiments, experiments):
             if exists == 0:
                 filtered.append(algorithm)
             else:
                 log.info("Experiment already exists: {}".format(algorithm))
+                existing = existing + 1
+        log.info("Number of exisiting experiments: {}/{}".format(existing, len(experiments)))
         return filtered
 
     def convert_to_sql_params(self, algorithm_params: dict):
@@ -84,7 +87,7 @@ class AlgorithmRunner:
                 algorithm_params['scaler'] is not None,
                 algorithm_params['experiment_n'])
 
-    def data_source(self, constraints_generator: callable = cg.f_2n, sigma0: float = 1,
+    def data_source(self, constraints_generator: callable = cg.f_2n, sigma0: float = 0.5,
                     margin: float = 1.1, scaler: [StandardScaler, None] = None,
                     clustering_k_min: int = 0, benchmark_mode: bool = False, db: str = 'experiments', experiment_n: int = 1):
 
@@ -93,7 +96,7 @@ class AlgorithmRunner:
         for k in range(1, 3):
             for n in range(2, 8):
                 for model in ['ball', 'simplex', 'cube']:
-                    for seed in range(0, 30):
+                    for seed in range(0, 4):
                         inopts = dict()
                         inopts['constraints_generator'] = constraints_generator.__name__
                         inopts['sigma0'] = sigma0
@@ -133,8 +136,11 @@ class AlgorithmRunner:
         return [self.data_source(benchmark_mode=True, db='benchmarks')]
 
     def run_instance(self, inopts: dict):
-        algorithm = CMAESAlgorithm(**inopts)
-        algorithm.experiment()
+        try:
+            algorithm = CMAESAlgorithm(**inopts)
+            algorithm.experiment()
+        except:
+            print("Error: {}".format(inopts))
 
     def run(self, experiments: list):
         experiments = flat(experiments)
@@ -164,6 +170,7 @@ class AlgorithmRunner:
 
 
 runner = AlgorithmRunner()
-experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
-# runner.run(experiments)
-runner.run_slurm(experiments)
+# experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
+experiments = runner.experiments_2()
+runner.run(experiments)
+# runner.run_slurm(experiments)
