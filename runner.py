@@ -96,7 +96,7 @@ class AlgorithmRunner:
         for k in range(1, 3):
             for n in range(2, 8):
                 for model in ['ball', 'simplex', 'cube']:
-                    for seed in range(0, 30):
+                    for seed in range(0, 4):
                         inopts = dict()
                         inopts['constraints_generator'] = constraints_generator.__name__
                         inopts['sigma0'] = sigma0
@@ -166,7 +166,7 @@ class AlgorithmRunner:
         for experiment in experiments:
             try:
                 mapped = list(map(lambda item: item[0] + ':' + str(item[1]), experiment.items()))
-                arguments = reduce(lambda key, value: key + ';' + value, mapped)
+                arguments = "\"" + reduce(lambda key, value: key + ';' + value, mapped) + "\""
                 pool.execute(cmd='python', arguments='./cma-es-modeling/cma-es {}'.format(arguments),
                              script_filename=str(self.convert_to_sql_params(experiment)))
             except:
@@ -177,7 +177,7 @@ class AlgorithmRunner:
 
 if __name__ == '__main__':
     runner = AlgorithmRunner()
-    # experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
-    experiments = runner.experiments_2()
+    experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
+    # experiments = runner.experiments_1()
     # runner.run(experiments)
     runner.run_slurm(experiments)

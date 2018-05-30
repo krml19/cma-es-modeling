@@ -293,7 +293,6 @@ if __name__ == '__main__':
         args['clustering_k_min'] = int(args['clustering_k_min'])
         args['seed'] = int(args['seed'])
         args['benchmark_mode'] = args['benchmark_mode'] == True
-        args['experiment_n'] = int(args['experiment_n'])
 
         algorithm = CMAESAlgorithm(**args)
         algorithm.experiment()
