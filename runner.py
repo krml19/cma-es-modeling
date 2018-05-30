@@ -167,7 +167,7 @@ class AlgorithmRunner:
             try:
                 mapped = list(map(lambda item: item[0] + ':' + str(item[1]), experiment.items()))
                 arguments = "\"" + reduce(lambda key, value: key + ';' + value, mapped) + "\""
-                pool.execute(cmd='python', arguments='cma-es {}'.format(arguments),
+                pool.execute(cmd='python', arguments='cmaes.py {}'.format(arguments),
                              script_filename=str(self.convert_to_sql_params(experiment)))
             except:
                 print(experiment)
