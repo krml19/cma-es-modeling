@@ -96,7 +96,7 @@ class AlgorithmRunner:
         for k in range(1, 3):
             for n in range(2, 8):
                 for model in ['ball', 'simplex', 'cube']:
-                    for seed in range(0, 4):
+                    for seed in range(0, 30):
                         inopts = dict()
                         inopts['constraints_generator'] = constraints_generator.__name__
                         inopts['sigma0'] = sigma0
