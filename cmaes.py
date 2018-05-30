@@ -13,8 +13,10 @@ from clustering import xmeans_clustering
 from sklearn.metrics import confusion_matrix
 import constraints_generator as cg
 import sys
+import time
 
 log = Logger(name='cma-es')
+
 
 def to_str(w: [list, np.ndarray]):
     return reduce((lambda x, y: str(x) + ' ' + str(y)), w)
@@ -48,7 +50,7 @@ class CMAESAlgorithm:
         self.db = db
         self.benchmark_mode = benchmark_mode
         self.draw = draw
-
+        self.time_delta = None
 
         if self.__scaler is not None:
             self.__scaler.fit(self.__train_X)
@@ -212,7 +214,7 @@ class CMAESAlgorithm:
 
     def experiment(self):
         _n = len(self.clusters)
-
+        start = time.process_time()
         if self.__clustering:
             for i, cluster in enumerate(self.clusters, start=1):
                 log.debug("Started analyzing cluster: {}/{}".format(i, _n))
@@ -225,6 +227,7 @@ class CMAESAlgorithm:
             cma_es = self.__cma_es()
             self.__results.append(cma_es)
             log.debug("Finished analyzing train dataset")
+        self.time_delta = time.process_time() - start
 
         database = Database(database_filename='{}.sqlite'.format(self.db))
         experiment = database.new_experiment()
@@ -248,6 +251,8 @@ class CMAESAlgorithm:
             experiment['fp'] = int(final_results['fp'])
             experiment['fn'] = int(final_results['fn'])
             experiment['f'] = final_results['f']
+            experiment['time'] = self.time_delta
+            experiment['test_positives'] = int(self.__test_Y.sum())
 
             for i, es in enumerate(self.__results):
                 es = es
@@ -264,9 +269,10 @@ class CMAESAlgorithm:
 
         except Exception as e:
             experiment['error'] = e
-            log.debug("Cannot process: {}".format(self.sql_params))
+            log.info("Cannot process: {}".format(self.sql_params))
         finally:
             experiment.save()
+            log.info("Finished: {}".format(self.sql_params))
 
     @property
     def sql_params(self):
