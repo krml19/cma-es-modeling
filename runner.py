@@ -6,6 +6,7 @@ import constraints_generator as cg
 import os
 import subprocess
 from functools import reduce
+from frozendict import frozendict
 
 log = Logger(name='runner')
 
@@ -31,7 +32,7 @@ class SlurmPool:
         # sbatch.write("#SBATCH -x lab-al-9\n")
         sbatch.write("#SBATCH -p idss-student")
         sbatch.write("#SBATCH -c 1 --mem=1475\n")
-        sbatch.write("#SBATCH -t 0:10:00\n")
+        sbatch.write("#SBATCH -t 1:00:00\n")
         sbatch.write("#SBATCH -Q\n")
         sbatch.write("date\n")
         sbatch.write("hostname\n")
@@ -58,7 +59,7 @@ class AlgorithmRunner:
         check_if_table_exists = database.engine.execute("SELECT count(*) FROM main.experiments").fetchone()[0]
         return check_if_table_exists > 0
 
-    def filter_algorithms(self, experiments: list, database: Database) -> list:
+    def filter_algorithms(self, experiments: iter, database: Database) -> list:
         if not self.check_if_table_is_empty(database=database):
             return experiments
 
@@ -97,17 +98,19 @@ class AlgorithmRunner:
             for n in range(2, 8):
                 for model in ['ball', 'simplex', 'cube']:
                     for seed in range(0, 30):
-                        inopts = dict()
-                        inopts['constraints_generator'] = constraints_generator.__name__
-                        inopts['sigma0'] = sigma0
-                        inopts['k'] = k
-                        inopts['n'] = n
-                        inopts['scaler'] = scaler
-                        inopts['margin'] = margin
-                        inopts['clustering_k_min'] = clustering_k_min
-                        inopts['seed'] = seed
-                        inopts['model_name'] = model
-                        inopts['benchmark_mode'] = benchmark_mode
+                        inopts = frozendict({
+                            'constraints_generator': constraints_generator.__name__,
+                            'sigma0': sigma0,
+                            'k': k,
+                            'n': n,
+                            'scaler': scaler,
+                            'margin': margin,
+                            'clustering_k_min': clustering_k_min,
+                            'seed': seed,
+                            'model_name': model,
+                            'benchmark_mode': benchmark_mode,
+                        })
+
                         experiments.append(inopts)
         return experiments
 
@@ -157,7 +160,7 @@ class AlgorithmRunner:
         pool.map(self.run_instance, experiments)
 
     def run_slurm(self, experiments: list):
-        experiments = flat(experiments)
+        experiments = set(flat(experiments))
         db = 'experiments.sqlite'
         database = Database(database_filename=db)
         experiments = self.filter_algorithms(experiments, database=database)
@@ -177,7 +180,7 @@ class AlgorithmRunner:
 
 if __name__ == '__main__':
     runner = AlgorithmRunner()
-    experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
-    # experiments = runner.experiments_1()
+    # experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
+    experiments = runner.experiments_1()
     # runner.run(experiments)
     runner.run_slurm(experiments)
