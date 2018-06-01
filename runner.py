@@ -32,7 +32,7 @@ class SlurmPool:
         # sbatch.write("#SBATCH -x lab-al-9\n")
         sbatch.write("#SBATCH -p idss-student")
         sbatch.write("#SBATCH -c 1 --mem=1475\n")
-        sbatch.write("#SBATCH -t 1:00:00\n")
+        sbatch.write("#SBATCH -t 2:00:00\n")
         sbatch.write("#SBATCH -Q\n")
         sbatch.write("date\n")
         sbatch.write("hostname\n")
