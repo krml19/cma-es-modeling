@@ -117,3 +117,8 @@ datasets/
 *.zip
 
 resources/
+
+# cython
+*.c
+*.so
+build/

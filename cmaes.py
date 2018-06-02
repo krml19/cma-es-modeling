@@ -33,9 +33,13 @@ class CMAESAlgorithm:
         self.__n_constraints = cg.generate(constraints_generator, n)
         self.__w0 = np.repeat(1, self.__n_constraints)
         self.__x0 = x0
+        log.debug('Creating train X')
         self.__train_X = data_model.train_set()
+        log.debug('Creating valid X')
         self.__valid_X = data_model.valid_set()
+        log.debug('Creating test X, Y')
         self.test_X, self.__test_Y = data_model.test_set()
+        log.debug('Finished creating datasets')
         self.__dimensions = self.__train_X.shape[1]
         self.__constraints_generator = constraints_generator
 
@@ -129,7 +133,7 @@ class CMAESAlgorithm:
         f = -f
 
         log.info('Y pred: {}, true: {}, ratio: {}'.format(y_pred.sum(), y_true.sum(), y_pred.sum() / y_true.sum()))
-        log.info('final f: {}'.format(f))
+        log.info('Final f: {}'.format(f))
         # final results
         final_results['tn'] = tn
         final_results['tp'] = tp
@@ -173,7 +177,7 @@ class CMAESAlgorithm:
 
             # log.debug(es.result)
 
-        log.debug("Best: {}, w: {}".format(es.best.f, es.best.x))
+        # log.debug("Best: {}, w: {}".format(es.best.f, es.best.x))
         if self.draw:
             self.__draw_results(es.best.x, title='Best solution: {}'.format(es.best.f))
         # es.plot()
@@ -229,6 +233,8 @@ class CMAESAlgorithm:
             log.debug("Finished analyzing train dataset")
         self.time_delta = time.process_time() - start
 
+
+
         database = Database(database_filename='{}.sqlite'.format(self.db))
         experiment = database.new_experiment()
 
@@ -269,10 +275,10 @@ class CMAESAlgorithm:
 
         except Exception as e:
             experiment['error'] = e
-            log.info("Cannot process: {}".format(self.sql_params))
+            log.info("[Error] Cannot process: {}".format(self.sql_params))
         finally:
             experiment.save()
-            log.info("Finished: {}".format(self.sql_params))
+            log.info("Finished: {} in: {}".format(self.sql_params, str(self.time_delta)))
 
     @property
     def sql_params(self):
