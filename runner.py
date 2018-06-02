@@ -32,7 +32,7 @@ class SlurmPool:
         # sbatch.write("#SBATCH -x lab-al-9\n")
         sbatch.write("#SBATCH -p idss-student")
         sbatch.write("#SBATCH -c 1 --mem=1475\n")
-        sbatch.write("#SBATCH -t 4:00:00\n")
+        sbatch.write("#SBATCH -t 6:00:00\n")
         sbatch.write("#SBATCH -Q\n")
         sbatch.write("date\n")
         sbatch.write("hostname\n")
@@ -180,6 +180,6 @@ class AlgorithmRunner:
 if __name__ == '__main__':
     runner = AlgorithmRunner()
     # experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
-    experiments = runner.experiments_2(seeds=range(0, 1))
+    experiments = runner.experiments_1()
     # runner.run(experiments)
     runner.run_slurm(experiments)
