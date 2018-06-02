@@ -32,7 +32,7 @@ class SlurmPool:
         # sbatch.write("#SBATCH -x lab-al-9\n")
         sbatch.write("#SBATCH -p idss-student")
         sbatch.write("#SBATCH -c 1 --mem=1475\n")
-        sbatch.write("#SBATCH -t 2:00:00\n")
+        sbatch.write("#SBATCH -t 4:00:00\n")
         sbatch.write("#SBATCH -Q\n")
         sbatch.write("date\n")
         sbatch.write("hostname\n")
@@ -89,15 +89,14 @@ class AlgorithmRunner:
                 algorithm_params['scaler'])
 
     def data_source(self, constraints_generator: callable = cg.f_2n, sigma0: float = 0.5,
-                    margin: float = 1.1, scaler: bool = False,
-                    clustering_k_min: int = 0, benchmark_mode: bool = False):
+                    margin: float = 1.1, scaler: bool = False, clustering_k_min: int = 0, benchmark_mode: bool = False,
+                    seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)):
 
         experiments = []
-
-        for k in range(1, 3):
-            for n in range(2, 8):
-                for model in ['ball', 'simplex', 'cube']:
-                    for seed in range(0, 30):
+        for seed in seeds:
+            for k in K:
+                for n in N:
+                    for model in ['ball', 'simplex', 'cube']:
                         inopts = frozendict({
                             'constraints_generator': constraints_generator.__name__,
                             'sigma0': sigma0,
@@ -114,21 +113,21 @@ class AlgorithmRunner:
                         experiments.append(inopts)
         return experiments
 
-    def experiments_1(self) -> list:
-        return [self.data_source(scaler=scaler) for scaler in [True, False]]
+    def experiments_1(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
+        return [self.data_source(scaler=scaler, seeds=seeds, K=K, N=N) for scaler in [True, False]]
 
-    def experiments_2(self) -> list:
-        return [self.data_source(constraints_generator=constraints_generator) for
+    def experiments_2(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
+        return [self.data_source(constraints_generator=constraints_generator, seeds=seeds, K=K, N=N, scaler=True) for
                 constraints_generator in [cg.f_2n, cg.f_2n2, cg.f_n3, cg.f_2pn]]
 
-    def experiments_3(self) -> list:
-        return [self.data_source(clustering_k_min=kmin) for kmin in [0, 1, 2]]
+    def experiments_3(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
+        return [self.data_source(clustering_k_min=kmin, seeds=seeds, K=K, N=N, scaler=True) for kmin in [0, 1, 2]]
 
-    def experiments_4(self) -> list:
-        return [self.data_source(sigma0=sigma) for sigma in [0.125, 0.25, 0.5, 1]]
+    def experiments_4(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
+        return [self.data_source(sigma0=sigma, seeds=seeds, K=K, N=N, scaler=True) for sigma in [0.125, 0.25, 0.5, 1]]
 
-    def experiments_5(self) -> list:
-        return [self.data_source(margin=margin) for margin in [0.9, 1, 1.1]]
+    def experiments_5(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
+        return [self.data_source(margin=margin, seeds=seeds, K=K, N=N, scaler=True) for margin in [0.9, 1, 1.1]]
 
     def benchmarks(self) -> list:
         return [self.data_source(benchmark_mode=True)]
@@ -181,6 +180,6 @@ class AlgorithmRunner:
 if __name__ == '__main__':
     runner = AlgorithmRunner()
     # experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
-    experiments = runner.experiments_1()
+    experiments = runner.experiments_2(seeds=range(0, 1))
     # runner.run(experiments)
     runner.run_slurm(experiments)
