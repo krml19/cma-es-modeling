@@ -76,8 +76,6 @@ class CMAESAlgorithm:
         w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
         w0 = w[-1:]
         w = w[:-1]
-        log.debug(w)
-        log.debug(w0)
 
         # recall
         card_b, tp = self.__train_X.shape[0], self.matches_constraints(self.__train_X, w, w0).sum()
