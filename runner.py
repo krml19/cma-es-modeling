@@ -31,7 +31,7 @@ class SlurmPool:
         sbatch.write("#!/bin/bash\n")
         sbatch.write("#SBATCH -p idss-student")
         sbatch.write("#SBATCH -c 1 --mem=1475\n")
-        sbatch.write("#SBATCH -t 6:00:00\n")
+        sbatch.write("#SBATCH -t 4:00:00\n")
         sbatch.write("#SBATCH -Q\n")
         sbatch.write("date\n")
         sbatch.write("hostname\n")
@@ -87,7 +87,7 @@ class AlgorithmRunner:
                 algorithm_params['clustering_k_min'],
                 algorithm_params['scaler'])
 
-    def data_source(self, constraints_generator: callable = cg.f_2n, sigma0: float = 1,
+    def data_source(self, constraints_generator: callable = cg.f_2n, sigma0: float = 2,
                     margin: float = 1.1, scaler: bool = False, clustering_k_min: int = 0, benchmark_mode: bool = False,
                     seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)):
 
@@ -177,6 +177,6 @@ class AlgorithmRunner:
 if __name__ == '__main__':
     runner = AlgorithmRunner()
     # experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
-    experiments = runner.experiments_2(seeds=range(0, 1))
-    runner.run(experiments)
-    # runner.run_slurm(experiments)
+    experiments = runner.experiments_1(seeds=range(0, 5))
+    # runner.run(experiments)
+    runner.run_slurm(experiments)
