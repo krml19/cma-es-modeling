@@ -275,7 +275,7 @@ class CMAESAlgorithm:
 
         except Exception as e:
             experiment['error'] = e
-            log.info("[Error] Cannot process: {}".format(self.sql_params))
+            log.error("Cannot process: {}".format(self.sql_params))
         finally:
             experiment.save()
             log.info("Finished: {} in: {}".format(self.sql_params, str(self.time_delta)))

@@ -148,7 +148,7 @@ class AlgorithmRunner:
             algorithm = CMAESAlgorithm(**inopts)
             algorithm.experiment()
         except:
-            log.info("Error: {}".format(inopts))
+            log.error("{}".format(inopts))
 
     def run(self, experiments: list):
         experiments = flat(experiments)
