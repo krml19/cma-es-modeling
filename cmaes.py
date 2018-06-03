@@ -27,7 +27,7 @@ class CMAESAlgorithm:
     def __init__(self, constraints_generator: str, sigma0: float,
                  scaler: bool, model_name: str, k: int, n: int, margin: float,
                  x0: np.ndarray = None, benchmark_mode: bool = False, clustering_k_min: int=0, seed: int = 404,
-                 db: str = 'experiments', draw: bool = False):
+                 db: str = 'experiments', draw: bool = False, max_iter: int = int(5e2)):
         data_model = DataModel(name=model_name, k=k, n=n, seed=seed)
 
         self.__n_constraints = cg.generate(constraints_generator, n)
@@ -54,6 +54,7 @@ class CMAESAlgorithm:
         self.draw = draw
         self.time_delta = None
         self.current_cluster = None
+        self.max_iter = max_iter
 
         if self.__scaler is not None:
             self.__scaler.fit(self.__train_X)
@@ -69,7 +70,6 @@ class CMAESAlgorithm:
         return x.prod(axis=1)
 
     def __objective_function(self, w):
-        log.debug("Counting")
         w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
         w0 = w[-1:]
         w = w[:-1]
@@ -158,7 +158,7 @@ class CMAESAlgorithm:
         if self.draw:
             self.__draw_results(x0)
         res = cma.fmin(self.__objective_function, x0=x0, sigma0=self.__sigma0,
-                       options={'seed': self.__seed, 'maxiter': int(1e3)}, restart_from_best=True, eval_initial_x=True)
+                       options={'seed': self.__seed, 'maxiter': self.max_iter, 'tolfun': 1e-1, 'timeout': 30 * 60}, restart_from_best=True, eval_initial_x=True)
         if self.draw:
             self.__draw_results(res[0])
 
@@ -243,6 +243,7 @@ class CMAESAlgorithm:
             experiment['name'] = self.__data_model.benchmark_model.name
             experiment['k'] = self.__data_model.benchmark_model.k
             experiment['n'] = self.__dimensions
+            experiment['max_iter'] = self.max_iter
 
             experiment['tp'] = int(best_test['tp'])
             experiment['tn'] = int(best_test['tn'])
@@ -289,11 +290,11 @@ class CMAESAlgorithm:
 
 
 
-n = 2
-seed = 4
-algorithm = CMAESAlgorithm(constraints_generator=cg.f_2n.__name__, sigma0=1, k=1,
-                           scaler=True, margin=1.1, clustering_k_min=0, model_name='cube', n=n, seed=seed, draw=False)
-algorithm.experiment()
+# n = 7
+# seed = 4
+# algorithm = CMAESAlgorithm(constraints_generator=cg.f_2n.__name__, sigma0=2, k=1,
+#                            scaler=True, margin=1.1, clustering_k_min=0, model_name='cube', n=n, seed=seed, draw=False)
+# algorithm.experiment()
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
