@@ -129,10 +129,12 @@ class CMAESAlgorithm:
         pr_y = max(pr_y, 1e-6)  # avoid division by 0
 
         # f
-        f = (recall ** 2) / pr_y if recall > 0.0 else -1.0 / pr_y
+        f = (recall ** 2) / pr_y
         f = -f
 
-        log.info('Y pred: {}, true: {}, ratio: {}'.format(y_pred.sum(), y_true.sum(), y_pred.sum() / y_true.sum()))
+        y_true_sum = y_true.sum()
+        ratio = y_pred.sum() / y_true_sum if y_true_sum > 0 else 0
+        log.info('Y pred: {}, true: {}, ratio: {}'.format(y_pred.sum(), y_true.sum(), ratio))
         log.info('Final f: {}'.format(f))
         # final results
         final_results['tn'] = tn

@@ -7,6 +7,7 @@ import os
 import subprocess
 from functools import reduce
 from frozendict import frozendict
+import psutil
 
 log = Logger(name='runner')
 
@@ -88,7 +89,7 @@ class AlgorithmRunner:
                 algorithm_params['clustering_k_min'],
                 algorithm_params['scaler'])
 
-    def data_source(self, constraints_generator: callable = cg.f_2n, sigma0: float = 0.5,
+    def data_source(self, constraints_generator: callable = cg.f_2n, sigma0: float = 1,
                     margin: float = 1.1, scaler: bool = False, clustering_k_min: int = 0, benchmark_mode: bool = False,
                     seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)):
 
@@ -155,7 +156,8 @@ class AlgorithmRunner:
         database = Database(database_filename=db)
         experiments = self.filter_algorithms(experiments, database=database)
 
-        pool = Pool(processes=4)  # start 4 worker processes
+        cpus = psutil.cpu_count(logical=False)
+        pool = Pool(processes=cpus)  # start worker processes
         pool.map(self.run_instance, experiments)
 
     def run_slurm(self, experiments: list):
@@ -180,6 +182,6 @@ class AlgorithmRunner:
 if __name__ == '__main__':
     runner = AlgorithmRunner()
     # experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
-    experiments = runner.experiments_1()
+    experiments = runner.experiments_1(seeds=range(0, 11))
     # runner.run(experiments)
     runner.run_slurm(experiments)
