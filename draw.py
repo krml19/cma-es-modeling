@@ -76,12 +76,12 @@ def draw2dmodel(train, df, model, constraints=None, title=None):
     w_ax = fig.add_subplot(gs1[-1, -1])
 
     # validation set
-    draw2dset(valid_ax, df=df, title=title)
+    draw2dset(ax=valid_ax, df=df, title=title)
 
     # train set
     train_title = 'Train set ({}/{})'.format(train['valid'].sum(),
                                              train['valid'].count()) if 'valid' in train else 'Train set'
-    draw2dset(train_ax, df=train, title=train_title)
+    draw2dset(ax=train_ax, df=train, title=train_title)
     if model == 'cube':
         draw_cube(ax=train_ax)
     elif model == 'ball':
@@ -104,12 +104,12 @@ def draw3dmodel(train, df, model, constraints=None, title=None):
     w_ax = fig.add_subplot(gs1[-1, -1], projection='3d')
 
     # validation set
-    draw3dset(valid_ax, df=df, title=title)
+    draw3dset(ax=valid_ax, df=df, title=title)
 
     # train set
     train_title = 'Train set ({}/{})'.format(train['valid'].sum(), train['valid'].count()) if 'valid' in train else 'Train set'
 
-    draw3dset(train_ax, df=train, title=train_title)
+    draw3dset(ax=train_ax, df=train, title=train_title)
 
     # constraints
     draw_constraints(w_ax, constraints=constraints, title='w (n={})'.format(len(constraints)))

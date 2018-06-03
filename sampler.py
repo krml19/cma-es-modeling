@@ -1,7 +1,7 @@
 import numpy as np
 import itertools
 import random
-
+import math
 
 def samples(bounds, rows):
     np.random.seed(seed=np.random.randint(int(1e4)))
@@ -19,14 +19,20 @@ def ct(arr, r):
     return np.round(si * co * r, decimals=5)
 
 
+def min_pow(x: int, value: int):
+    p = x ** x
+    return x if p >= value else min_pow(x=x+1, value=value)
+
+
 def cartesian(n: int, dim: int, r: float=1):
     assert dim >= 2
     assert n >= dim
 
-    _n = np.ceil(n/(dim-1))
+    _n = min_pow(2, n)
+    _n = _n if dim > 2 else _n * 2
     phis = np.arange(_n) / _n * 2 * np.pi
 
-    phis = [np.array(i) for i in itertools.product(phis, repeat=dim-1)]
+    phis = [np.array(i) for i in itertools.product(phis, repeat=int(dim - 1))]
     random.shuffle(phis)
     phis = itertools.islice(phis, 0, int(n))
 

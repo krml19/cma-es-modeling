@@ -29,8 +29,6 @@ class SlurmPool:
     def execute(self, cmd, arguments, script_filename):
         sbatch = open("./scripts/%s.sh" % script_filename, "w")
         sbatch.write("#!/bin/bash\n")
-        # sbatch.write("#SBATCH -p lab-ci,lab-43,lab-44\n")
-        # sbatch.write("#SBATCH -x lab-al-9\n")
         sbatch.write("#SBATCH -p idss-student")
         sbatch.write("#SBATCH -c 1 --mem=1475\n")
         sbatch.write("#SBATCH -t 6:00:00\n")
@@ -119,7 +117,7 @@ class AlgorithmRunner:
 
     def experiments_2(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
         return [self.data_source(constraints_generator=constraints_generator, seeds=seeds, K=K, N=N, scaler=True) for
-                constraints_generator in [cg.f_2n, cg.f_2n2, cg.f_n3, cg.f_2pn]]
+                constraints_generator in [cg.f_2n2, cg.f_n3, cg.f_2pn]]
 
     def experiments_3(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
         return [self.data_source(clustering_k_min=kmin, seeds=seeds, K=K, N=N, scaler=True) for kmin in [0, 1, 2]]
@@ -144,11 +142,8 @@ class AlgorithmRunner:
         }[key]
 
     def run_instance(self, inopts: dict):
-        try:
-            algorithm = CMAESAlgorithm(**inopts)
-            algorithm.experiment()
-        except:
-            log.error("{}".format(inopts))
+        algorithm = CMAESAlgorithm(**inopts)
+        algorithm.experiment()
 
     def run(self, experiments: list):
         experiments = flat(experiments)
@@ -182,6 +177,6 @@ class AlgorithmRunner:
 if __name__ == '__main__':
     runner = AlgorithmRunner()
     # experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
-    experiments = runner.experiments_1(seeds=range(0, 11))
-    # runner.run(experiments)
-    runner.run_slurm(experiments)
+    experiments = runner.experiments_2(seeds=range(0, 1))
+    runner.run(experiments)
+    # runner.run_slurm(experiments)
