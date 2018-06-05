@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-rm *.out
+#rm *.out
 rm run.sh
 rm -rf scripts
 scancel -u inf116360 -t PENDING

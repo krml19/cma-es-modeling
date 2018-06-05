@@ -88,7 +88,7 @@ class AlgorithmRunner:
                 algorithm_params['scaler'])
 
     def data_source(self, constraints_generator: callable = cg.f_2n, sigma0: float = 2,
-                    margin: float = 1.1, scaler: bool = False, clustering_k_min: int = 0, benchmark_mode: bool = False,
+                    margin: float = 1.1, scaler: bool = True, clustering_k_min: int = 0, benchmark_mode: bool = False,
                     seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)):
 
         experiments = []
@@ -117,7 +117,7 @@ class AlgorithmRunner:
 
     def experiments_2(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
         return [self.data_source(constraints_generator=constraints_generator, seeds=seeds, K=K, N=N, scaler=True) for
-                constraints_generator in [cg.f_2n2, cg.f_n3, cg.f_2pn]]
+                constraints_generator in [cg.f_2n, cg.f_2n2, cg.f_n3, cg.f_2pn]]
 
     def experiments_3(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
         return [self.data_source(clustering_k_min=kmin, seeds=seeds, K=K, N=N, scaler=True) for kmin in [0, 1, 2]]
@@ -177,6 +177,6 @@ class AlgorithmRunner:
 if __name__ == '__main__':
     runner = AlgorithmRunner()
     # experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
-    experiments = runner.experiments_1(seeds=range(0, 5))
+    experiments = runner.experiments_2(seeds=range(0, 5))
     # runner.run(experiments)
     runner.run_slurm(experiments)
