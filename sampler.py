@@ -8,7 +8,7 @@ def samples(bounds, rows):
     return np.matrix(
         [np.random.uniform(low=low, high=high, size=(rows, 1)).flatten() for low, high in bounds])
 
-
+# Taken from: https://stackoverflow.com/a/20133681
 def ct(arr, r):
     a = np.concatenate((np.array([2 * np.pi]), arr))
     si = np.sin(a)
