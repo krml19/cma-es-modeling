@@ -303,11 +303,11 @@ if __name__ == '__main__':
         args['k'] = int(args['k'])
         args['n'] = int(args['n'])
         args['sigma0'] = float(args['sigma0'])
-        args['scaler'] = args['scaler'] == True
+        args['scaler'] = args['scaler'] == 'True'
         args['margin'] = float(args['margin'])
         args['clustering_k_min'] = int(args['clustering_k_min'])
         args['seed'] = int(args['seed'])
-        args['benchmark_mode'] = args['benchmark_mode'] == True
+        args['benchmark_mode'] = args['benchmark_mode'] == 'True'
 
         algorithm = CMAESAlgorithm(**args)
         algorithm.experiment()
