@@ -188,6 +188,6 @@ class AlgorithmRunner:
 if __name__ == '__main__':
     runner = AlgorithmRunner()
     # experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
-    experiments = runner.experiments_3(seeds=range(0, 5))
+    experiments = runner.experiments_4(seeds=range(0, 5))
     # runner.run(experiments)
     runner.run_slurm(experiments)
