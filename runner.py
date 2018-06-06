@@ -113,7 +113,7 @@ class AlgorithmRunner:
         return experiments
 
     def experiments_1(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
-        return [self.data_source(scaler=scaler, seeds=seeds, K=K, N=N) for scaler in [True, False]]
+        return [self.data_source(scaler=scaler, seeds=seeds, K=K, N=N, sigma0=1) for scaler in [True, False]]
 
     def experiments_2(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
         return [self.data_source(constraints_generator=constraints_generator, seeds=seeds, K=K, N=N, scaler=True) for
@@ -177,6 +177,6 @@ class AlgorithmRunner:
 if __name__ == '__main__':
     runner = AlgorithmRunner()
     # experiments = flat([runner.experiments_1(), runner.experiments_2(), runner.experiments_3(), runner.experiments_4(), runner.experiments_5()])
-    experiments = runner.experiments_2(seeds=range(0, 5))
+    experiments = runner.experiments_1(seeds=range(0, 5))
     # runner.run(experiments)
     runner.run_slurm(experiments)

@@ -158,7 +158,7 @@ class CMAESAlgorithm:
         if self.draw:
             self.__draw_results(x0)
         res = cma.fmin(self.__objective_function, x0=x0, sigma0=self.__sigma0,
-                       options={'seed': self.__seed, 'maxiter': self.max_iter, 'tolfun': 1e-1, 'timeout': 30 * 60}, restart_from_best=True, eval_initial_x=True)
+                       options={'seed': self.__seed, 'maxiter': self.max_iter, 'tolfun': 1e-1, 'timeout': 60 * 60}, restart_from_best=True, eval_initial_x=True)
         if self.draw:
             self.__draw_results(res[0])
 
