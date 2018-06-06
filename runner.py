@@ -117,7 +117,7 @@ class AlgorithmRunner:
 
     def experiments_2(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
         return [self.data_source(constraints_generator=constraints_generator, seeds=seeds, K=K, N=N, scaler=True) for
-                constraints_generator in [cg.f_2n, cg.f_2n2, cg.f_n3, cg.f_2pn]]
+                constraints_generator in [cg.f_2n, cg.f_2np2, cg.f_n3, cg.f_2pn]]
 
     def experiments_3(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
         return [self.data_source(clustering_k_min=kmin, seeds=seeds, K=K, N=N, scaler=True) for kmin in [0, 1, 2]]
