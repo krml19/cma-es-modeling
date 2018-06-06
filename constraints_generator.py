@@ -6,7 +6,7 @@ def f_2n(n: int) -> int:
 
 
 def f_2n2(n: int) -> int:
-    return 2 * n ** n
+    return 2 * n ** 2
 
 
 def f_n3(n: int) -> int:
