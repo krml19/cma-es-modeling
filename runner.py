@@ -131,15 +131,26 @@ class AlgorithmRunner:
     def benchmarks(self) -> list:
         return [self.data_source(benchmark_mode=True)]
 
-    def experiment(self, key):
+    def experiment(self, key, seeds: range = range(0, 30)):
         return {
-            1: self.experiments_1(),
-            2: self.experiments_2(),
-            3: self.experiments_3(),
-            4: self.experiments_4(),
-            5: self.experiments_5(),
+            1: self.experiments_1(seeds=seeds),
+            2: self.experiments_2(seeds=seeds),
+            3: self.experiments_3(seeds=seeds),
+            4: self.experiments_4(seeds=seeds),
+            5: self.experiments_5(seeds=seeds),
             'benchmarks': self.benchmarks()
         }[key]
+
+    def check_existing_experiments(self, seeds: range = range(0, 30)):
+        db = 'experiments.sqlite'
+        database = Database(database_filename=db)
+
+        for i in range(1, 6):
+            experiments = set(flat(self.experiment(i, seeds=seeds)))
+            seq_of_params = [self.convert_to_sql_params(experiment) for experiment in experiments]
+            db_experiments = [database.engine.execute(self.sql, params).fetchone()[0] for params in seq_of_params]
+            filtered = list(filter(lambda t: t[0] > 0, zip(db_experiments, experiments)))
+            log.info("Number of exisiting experiments in experiment {}: {}/{}".format(i, len(filtered), len(experiments)))
 
     def run_instance(self, inopts: dict):
         algorithm = CMAESAlgorithm(**inopts)
