@@ -62,7 +62,7 @@ class CMAESAlgorithm:
             self.__valid_X = self.__scaler.transform(self.__valid_X)
 
         if self.__clustering:
-            self.clusters = xmeans_clustering(self.__train_X, kmin=clustering_k_min-100, visualize=False)
+            self.clusters = xmeans_clustering(self.__train_X, kmin=clustering_k_min, visualize=False)
 
     def satisfies_constraints(self, X: np.ndarray, w: np.ndarray, w0: np.ndarray) -> np.ndarray:
         x = np.matmul(X, w)
