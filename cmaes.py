@@ -62,7 +62,7 @@ class CMAESAlgorithm:
             self.__valid_X = self.__scaler.transform(self.__valid_X)
 
         if self.__clustering:
-            self.clusters = xmeans_clustering(self.__train_X, kmin=clustering_k_min, visualize=False)
+            self.clusters = xmeans_clustering(self.__train_X, kmin=clustering_k_min-100, visualize=False)
 
     def satisfies_constraints(self, X: np.ndarray, w: np.ndarray, w0: np.ndarray) -> np.ndarray:
         x = np.matmul(X, w)
@@ -205,8 +205,8 @@ class CMAESAlgorithm:
             for i, cluster in enumerate(self.clusters, start=1):
                 log.debug("Started analyzing cluster: {}/{}".format(i, _n))
                 self.current_cluster = self.__train_X[cluster]
-                if self.__scaler:
-                    self.current_cluster = self.__scaler.transform(self.current_cluster)
+                # if self.__scaler:
+                #     self.current_cluster = self.__scaler.transform(self.current_cluster)
                 cma_es = self.__cma_es()
                 self.__results.append(cma_es)
                 log.debug("Finished analyzing cluster: {}/{}".format(i, _n))
@@ -290,7 +290,7 @@ class CMAESAlgorithm:
 
 
 # algorithm = CMAESAlgorithm(constraints_generator=cg.f_2n.__name__, sigma0=2, k=2,
-#                            scaler=True, margin=1.1, clustering_k_min=1, model_name='cube', n=7, seed=4, draw=False)
+#                            scaler=True, margin=1.1, clustering_k_min=2, model_name='cube', n=2, seed=4, draw=False)
 # algorithm.experiment()
 
 if __name__ == '__main__':

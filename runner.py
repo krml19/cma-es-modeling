@@ -123,7 +123,7 @@ class AlgorithmRunner:
         return [self.data_source(clustering_k_min=kmin, seeds=seeds, K=K, N=N, scaler=True) for kmin in [0, 1, 2]]
 
     def experiments_4(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
-        return [self.data_source(sigma0=sigma, seeds=seeds, K=K, N=N, scaler=True) for sigma in [0.125, 0.25, 0.5, 1]]
+        return [self.data_source(sigma0=sigma, seeds=seeds, K=K, N=N, scaler=True) for sigma in [0.125, 0.25, 0.5, 1, 2]]
 
     def experiments_5(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
         return [self.data_source(margin=margin, seeds=seeds, K=K, N=N, scaler=True) for margin in [0.9, 1, 1.1]]
@@ -187,7 +187,7 @@ class AlgorithmRunner:
 
 if __name__ == '__main__':
     runner = AlgorithmRunner()
-    seeds = range(6, 8)
+    seeds = range(0, 8)
     experiments = flat([runner.experiments_1(seeds=seeds),
                         runner.experiments_2(seeds=seeds),
                         runner.experiments_3(seeds=seeds),
