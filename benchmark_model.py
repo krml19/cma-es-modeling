@@ -11,7 +11,7 @@ class BenchmarkModel:
     def __init__(self, i, d=2.7, train_rows=500, test_rows=int(1e5), L=1e10, name='base-model', B=list([1, 1])):
         self.variables = np.arange(1, i + 1)
         self.i = i
-        self.d = d * np.ones(i)
+        self.d = d
         self.name = name
         self.train_rows = train_rows
         self.test_rows = test_rows

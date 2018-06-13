@@ -28,7 +28,7 @@ class CMAESAlgorithm:
                  scaler: bool, model_name: str, k: int, n: int, margin: float,
                  x0: np.ndarray = None, benchmark_mode: bool = False, clustering_k_min: int=0, seed: int = 404,
                  db: str = 'experiments', draw: bool = False, max_iter: int = int(5e2), train_sample: int = 500):
-        data_model = DataModel(name=model_name, k=k, n=n, seed=seed, train_samples=train_sample)
+        data_model = DataModel(name=model_name, k=k, n=n, seed=seed, train_sample=train_sample)
 
         self.__n_constraints = cg.generate(constraints_generator, n)
         self.__w0 = np.repeat(1, self.__n_constraints)
@@ -242,6 +242,7 @@ class CMAESAlgorithm:
             experiment['k'] = self.__data_model.benchmark_model.k
             experiment['n'] = self.__dimensions
             experiment['max_iter'] = self.max_iter
+            experiment['d'] = self.__data_model.benchmark_model.d
 
             experiment['tp'] = int(best_test['tp'])
             experiment['tn'] = int(best_test['tn'])
@@ -261,7 +262,6 @@ class CMAESAlgorithm:
             experiment['positives'] = self.test_Y.sum()
 
             for i, es in enumerate(self.__results):
-                es = es
 
                 W_start = self.split_w(es[8].x0, split_w=True)
                 W = self.split_w(es[0], split_w=True)
@@ -290,8 +290,8 @@ class CMAESAlgorithm:
                  self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
 
 
-algorithm = CMAESAlgorithm(constraints_generator=cg.f_2n.__name__, sigma0=2, k=2,
-                           scaler=True, margin=1.1, clustering_k_min=2, model_name='simplex', n=7, seed=0, draw=False)
+algorithm = CMAESAlgorithm(constraints_generator=cg.f_2n.__name__, sigma0=2, k=1,
+                           scaler=True, margin=1.1, clustering_k_min=2, model_name='simplex', n=5, seed=0, draw=False)
 algorithm.experiment()
 
 if __name__ == '__main__':
