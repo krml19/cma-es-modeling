@@ -47,7 +47,7 @@ class BenchmarkModel:
         self.logger.debug('Removing invalid points and validation column')
         df = df.drop(['valid'], axis=1, errors='ignore')
 
-        self.__save(df=df.head(self.train_rows), path=fh.Paths.train.value)
+        # self.__save(df=df.head(self.train_rows), path=fh.Paths.train.value)
         return df
 
     def __generate_train_subset(self):
@@ -66,30 +66,30 @@ class BenchmarkModel:
         fh.write_data_frame(df=df, filename=filename, path=path)
         self.logger.debug('Saved: {}{}'.format(path, filename))
 
-    def generate_validation_dataset(self):
-        cols = self.variable_names(self.variables)
-        samples = sampler.samples(self.bounds, rows=self.test_rows)
-        df = pd.DataFrame(samples.T, columns=cols)
+    # def generate_validation_dataset(self):
+    #     cols = self.variable_names(self.variables)
+    #     samples = sampler.samples(self.bounds, rows=self.test_rows, seed=self.)
+    #     df = pd.DataFrame(samples.T, columns=cols)
+    #
+    #     assert df.shape[0] == self.test_rows
+    #     # self.__save(df=df, path=fh.Paths.valid.value)
+    #     return df
 
-        assert df.shape[0] == self.test_rows
-        self.__save(df=df, path=fh.Paths.valid.value)
-        return df
+    # def generate_test_dataset(self):
+    #     cols = self.variable_names(self.variables)
+    #     samples = sampler.samples(self.bounds, rows=self.test_rows)
+    #     df = pd.DataFrame(samples.T, columns=cols)
+    #     self.logger.debug('Generating validation columns')
+    #     df['valid'] = self.generate_valid_column(df)
+    #     assert df.shape[0] == self.test_rows
+    #     # self.__save(df=df, path=fh.Paths.test.value)
+    #     return df
 
-    def generate_test_dataset(self):
-        cols = self.variable_names(self.variables)
-        samples = sampler.samples(self.bounds, rows=self.test_rows)
-        df = pd.DataFrame(samples.T, columns=cols)
-        self.logger.debug('Generating validation columns')
-        df['valid'] = self.generate_valid_column(df)
-        assert df.shape[0] == self.test_rows
-        self.__save(df=df, path=fh.Paths.test.value)
-        return df
-
-    def generate_datasets(self):
-        # FIXME uncomment train dataset generation
-        # self.generate_train_dataset()
-        self.generate_validation_dataset()
-        self.generate_test_dataset()
+    # def generate_datasets(self):
+    #     # FIXME uncomment train dataset generation
+    #     # self.generate_train_dataset()
+    #     self.generate_validation_dataset()
+    #     self.generate_test_dataset()
 
     def filename(self) -> str:
         return "{}_{}_{}".format(self.name, self.i, self.k)

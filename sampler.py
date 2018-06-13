@@ -3,12 +3,14 @@ import itertools
 import random
 import math
 
-def samples(bounds, rows):
-    np.random.seed(seed=np.random.randint(int(1e4)))
+
+def samples(bounds: list, rows: int, seed: int):
+    np.random.seed(seed=np.random.randint(seed))
     return np.matrix(
         [np.random.uniform(low=low, high=high, size=(rows, 1)).flatten() for low, high in bounds])
 
-# Taken from: https://stackoverflow.com/a/20133681
+
+# Source: https://stackoverflow.com/a/20133681
 def ct(arr, r):
     a = np.concatenate((np.array([2 * np.pi]), arr))
     si = np.sin(a)

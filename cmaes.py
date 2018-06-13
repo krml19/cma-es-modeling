@@ -27,8 +27,8 @@ class CMAESAlgorithm:
     def __init__(self, constraints_generator: str, sigma0: float,
                  scaler: bool, model_name: str, k: int, n: int, margin: float,
                  x0: np.ndarray = None, benchmark_mode: bool = False, clustering_k_min: int=0, seed: int = 404,
-                 db: str = 'experiments', draw: bool = False, max_iter: int = int(5e2)):
-        data_model = DataModel(name=model_name, k=k, n=n, seed=seed)
+                 db: str = 'experiments', draw: bool = False, max_iter: int = int(5e2), train_sample: int = 500):
+        data_model = DataModel(name=model_name, k=k, n=n, seed=seed, train_samples=train_sample)
 
         self.__n_constraints = cg.generate(constraints_generator, n)
         self.__w0 = np.repeat(1, self.__n_constraints)
@@ -40,7 +40,7 @@ class CMAESAlgorithm:
         log.debug('Finished creating datasets')
         self.__dimensions = self.__train_X.shape[1]
         self.__constraints_generator = constraints_generator
-        self.__test_X, self.__test_Y = None, None
+        self.testX, self.testY = None, None
         self.__sigma0 = sigma0
         self.__scaler = StandardScaler() if scaler else None
         self.__data_model = data_model
@@ -205,8 +205,6 @@ class CMAESAlgorithm:
             for i, cluster in enumerate(self.clusters, start=1):
                 log.debug("Started analyzing cluster: {}/{}".format(i, _n))
                 self.current_cluster = self.__train_X[cluster]
-                # if self.__scaler:
-                #     self.current_cluster = self.__scaler.transform(self.current_cluster)
                 cma_es = self.__cma_es()
                 self.__results.append(cma_es)
                 log.debug("Finished analyzing cluster: {}/{}".format(i, _n))
@@ -220,12 +218,12 @@ class CMAESAlgorithm:
 
 
         log.debug('Creating test X, Y')
-        self.__test_X, self.__test_Y = self.__data_model.test_set()
+        self.testX, self.testY = self.__data_model.test_set()
         if self.__scaler is not None:
-            self.__test_X = self.__scaler.transform(self.__test_X)
+            self.testX = self.__scaler.transform(self.testX)
 
         best_train = self.best(X=self.__train_X, V=self.__valid_X, Y=np.ones(self.__train_X.shape[0]))
-        best_test = self.best(X=self.__test_X, V=self.__valid_X, Y=self.__test_Y)
+        best_test = self.best(X=self.testX, V=self.__valid_X, Y=self.testY)
 
         database = Database(database_filename='{}.sqlite'.format(self.db))
         experiment = database.new_experiment()
@@ -258,6 +256,9 @@ class CMAESAlgorithm:
             experiment['train_f'] = best_train['f']
 
             experiment['time'] = self.time_delta
+            experiment['timestamp'] = time.time()
+
+            experiment['positives'] = self.testY.sum()
 
             for i, es in enumerate(self.__results):
                 es = es
@@ -289,9 +290,9 @@ class CMAESAlgorithm:
                  self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
 
 
-# algorithm = CMAESAlgorithm(constraints_generator=cg.f_2n.__name__, sigma0=2, k=2,
-#                            scaler=True, margin=1.1, clustering_k_min=2, model_name='cube', n=2, seed=4, draw=False)
-# algorithm.experiment()
+algorithm = CMAESAlgorithm(constraints_generator=cg.f_2n.__name__, sigma0=2, k=2,
+                           scaler=True, margin=1.1, clustering_k_min=2, model_name='simplex', n=7, seed=0, draw=False)
+algorithm.experiment()
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
@@ -305,6 +306,7 @@ if __name__ == '__main__':
         args['clustering_k_min'] = int(args['clustering_k_min'])
         args['seed'] = int(args['seed'])
         args['benchmark_mode'] = args['benchmark_mode'] == 'True'
+        args['train_sample'] = int(args['train_sample'])
 
         algorithm = CMAESAlgorithm(**args)
         algorithm.experiment()

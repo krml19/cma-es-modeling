@@ -3,6 +3,10 @@ import sqlite3
 from sklearn.preprocessing import QuantileTransformer
 import scipy.stats as stats
 import runner
+import numpy as np
+from logger import Logger
+
+log = Logger(name='cma-es')
 
 
 class Aggragator:
@@ -16,9 +20,9 @@ class Aggragator:
 
     def transform(self) -> pd.DataFrame:
         algorithm_runner = runner.AlgorithmRunner()
-        sql = "SELECT * FROM experiments WHERE constraints_generator=? AND margin=? AND sigma=? AND k=? AND n=? AND seed=? AND name=? AND clustering=? AND standardized=?"
+        sql = "SELECT * FROM experiments WHERE constraints_generator=? AND margin=? AND sigma=? AND k=? AND n=? AND seed=? AND name=? AND clustering=? AND standardized=? AND (train_tp + train_fn)=?"
         connection = sqlite3.connect("experiments.sqlite")
-        queries = runner.flat(algorithm_runner.experiment(self.experiment))
+        queries = runner.flat(algorithm_runner.experiment(self.experiment, seeds=range(0, 30)))
         df = pd.concat([pd.read_sql_query(sql=sql, params=algorithm_runner.convert_to_sql_params(q), con=connection) for q in queries])
 
         connection.close()
@@ -35,23 +39,23 @@ class Aggragator:
         def reducer(X):
             return str(set(X.unique())).replace('\'', '')
 
-        info['margin'] = df['margin'].iloc[0]
-        info['n'] = "{} - {}".format(df['n'].min(), df['n'].max())
-        info['k'] = "{} - {}".format(df['k'].min(), df['k'].max())
-        info['margin'] = df['margin'].iloc[0]
-        info['sigma'] = df['sigma'].iloc[0]
-        info['standardized'] = reducer(df['standardized'])
-        info['constraints_generator'] = reducer(df['constraints_generator'])
-        info['clustering'] = reducer(df['clustering'])
+        # info['margin'] = df['margin'].iloc[0]
+        # info['n'] = "{} - {}".format(df['n'].min(), df['n'].max())
+        # info['k'] = "{} - {}".format(df['k'].min(), df['k'].max())
+        # info['margin'] = df['margin'].iloc[0]
+        # info['sigma'] = df['sigma'].iloc[0]
+        # info['standardized'] = reducer(df['standardized'])
+        # info['constraints_generator'] = reducer(df['constraints_generator'])
+        # info['clustering'] = reducer(df['clustering'])
+        # info['seed'] = reducer(df['seed'])
+        # info['total_experiments'] = df.shape[0]
         info[self.attribute] = reducer(df[self.attribute])
-        info['seed'] = reducer(df['seed'])
-        info['total_experiments'] = df.shape[0]
 
         self.info = info
 
     def __get_stats(self, group):
         results = {
-            'f_mean': group['f'].mean() * -1,
+            'f_mean': (group['f'].mean() * -1),
             'f_sem': group['f'].sem(ddof=1) * stats.norm.ppf(q=0.975),
             'tp_mean': group['tp'].mean(),
             'tn_mean': group['tn'].mean(),
@@ -71,10 +75,10 @@ class Aggragator:
         return pd.Series(results, name='metrics')
 
     def __normalize(self, series: pd.Series):
-        # series = series.applymap(lambda x: np.log(1+x))
         scaler = QuantileTransformer()
-        scaler.fit(series.values.reshape(-1, 1))
-        series = series.applymap(lambda x: scaler.transform(x)[0][0])
+        values = np.nan_to_num(series.values)
+        scaler.fit(values.reshape(-1, 1))
+        series = series.apply(np.nan_to_num).applymap(lambda x: scaler.transform(x)[0][0])
         return series
 
     def __expand_dataframes(self, df2, ranking_attribute: str):
@@ -86,6 +90,9 @@ class Aggragator:
 
         rank_norm_keys = [('rank_norm', key) for key in self.attribute_values]
         data_frame[rank_norm_keys] = self.__normalize(data_frame['f_mean'])
+
+        sem_norm_keys = [('sem_norm', key) for key in self.attribute_values]
+        data_frame[sem_norm_keys] = self.__normalize(data_frame['f_sem'])
 
         return data_frame
 

@@ -15,21 +15,23 @@ pm = '\\,$\\pm$\\,'
 
 def mappings(value):
     if isinstance(value, str):
-        return value.replace('f_2n', '2n')\
-                    .replace('f_2n2', '2n^2')\
-                    .replace('f_n3', '2n^3')\
-                    .replace('f_2pn', '2^n')
+        return value \
+            .replace('f_2np2', '2n^2') \
+            .replace('f_2n', '2n') \
+            .replace('f_n3', 'n^3') \
+            .replace('f_2pn', '2^n')
     else:
         return value
 
+
 def header_mappings(value):
     if isinstance(value, str):
-        return value.replace('standardized', 'Standaryzacja')\
-                    .replace('margin', 'Margines')\
-                    .replace('constraints_generator', 'Ograniczenia')\
-                    .replace('sigma', '\sigma')\
-                    .replace('clustering', 'k_{min}') \
-                    .replace('total_experiments', 'Total')
+        return value.replace('standardized', 'Standaryzacja') \
+            .replace('margin', 'Margines') \
+            .replace('constraints_generator', 'Ograniczenia') \
+            .replace('sigma', '\sigma') \
+            .replace('clustering', 'k_{min}') \
+            .replace('total_experiments', 'Total')
     else:
         return value
 
@@ -70,33 +72,38 @@ class DataTable:
 
     def beautify_name(self, name: str):
         components = name.split('_')
-        return '${name}_{{{n}}}^{{{k}}}$'.format(name=components[0], n=components[2], k=components[1]) if len(components) == 3 else name
-
+        return '${name}_{{{n}}}^{{{k}}}$'.format(name=components[0], n=components[2], k=components[1]) if len(
+            components) == 3 else name
 
     def create_row(self, series: pd.Series):
         unstucked = series.unstack().apply(
-            lambda row: self.map_to_cell(row['rank_norm'], row['f_mean'], row['f_sem']))
+            lambda row: self.map_to_cell(row['rank_norm'], row['f_mean'], row['sem_norm']))
         return unstucked
 
     def map_to_color(self, x: float) -> str:
         # return '{},{},{}'.format(x, 1 - x, 0)
         return '{},{},{}'.format(1 - x, x, 0)
 
+    def error(self, x: float) -> str:
+        return '\\begin{tikzpicture}[y=0.75em,baseline=1pt]\\draw[very thick] (0,0) -- (0,%f);\\end{tikzpicture}' % x
+
     def map_to_cell(self, norm_rank: float, value: float, error: float) -> str:
-        return '\cellcolor[rgb]{{{color}}} {value} {pm} {error}'.format(color=self.map_to_color(norm_rank), value=value, pm=pm, error=error)
+        return '\cellcolor[rgb]{%s} %0.2f %s' % (self.map_to_color(norm_rank), value, self.error(error))
 
     def header(self):
         attributes = list(map(lambda x: convert_attribute_value(x), self.attribute_values))
         return bold('problem') + sep + reduce(lambda x, y: x + sep + y, attributes)
 
     def top_caption(self, name, cols):
-        return '\\hline\n \multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=cols, alignment='|c|', name=name)
+        return '\\hline\n \multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=cols, alignment='|c|',
+                                                                                   name=name)
 
     def concat_row(self, x: pd.Series):
         return self.beautify_name(x.name) + sep + reduce(lambda xi, yi: xi + sep + yi, x)
 
     def rank(self, data: pd.DataFrame):
-        result = bold("rank") + sep + reduce(lambda x, y: str(x) + sep + str(y), data['rank'].mean().round(decimals=self.decimals))
+        result = bold("rank") + sep + reduce(lambda x, y: str(x) + sep + str(y),
+                                             map(lambda x: "%0.2f" % x, data['rank'].mean()))
         return result
 
     def create_table(self) -> str:
@@ -178,7 +185,8 @@ class Environment:
         body = self.body.build() if isinstance(self.body, Environment) else self.body
         return '\\begin{{{component}}}{curly}{brackets}\n' \
                '{body}\n' \
-               '\\end{{{component}}}\n'.format(component=self.component_type, curly=curly_options, brackets=bracket_options, body=body)
+               '\\end{{{component}}}\n'.format(component=self.component_type, curly=curly_options,
+                                               brackets=bracket_options, body=body)
 
 
 class Centering(Environment):
@@ -210,7 +218,7 @@ class Tabular(Environment):
     @Environment.body.setter
     def body(self, value):
         if isinstance(value, DataTable):
-            columns = ['c|'] * value.cols
+            columns = ['r|'] * value.cols
             columns = '|l|' + reduce(lambda x, y: x + y, columns)
             self.curly_options.value = columns
             Environment.body.fset(self, value.create_table())
@@ -226,7 +234,8 @@ Experiment = namedtuple('Experiment', ['experiment', 'benchmark_mode', 'attribut
 
 
 def table(experiment: Experiment):
-    aggregator = Aggragator(experiment=experiment.experiment, benchmark_mode=experiment.benchmark_mode, attribute=experiment.attribute)
+    aggregator = Aggragator(experiment=experiment.experiment, benchmark_mode=experiment.benchmark_mode,
+                            attribute=experiment.attribute)
     data_frame = aggregator.transform()
 
     data_table = DataTable(data_frame, experiment.header, attribute=aggregator.attribute,
@@ -257,7 +266,8 @@ def table(experiment: Experiment):
 
 
 experiment1 = Experiment(experiment=1, benchmark_mode=False, attribute='standardized', header=bold('Standaryzacja'))
-experiment2 = Experiment(experiment=2, benchmark_mode=False, attribute='constraints_generator',  header=bold('Liczba ograniczeń'))
+experiment2 = Experiment(experiment=2, benchmark_mode=False, attribute='constraints_generator',
+                         header=bold('Liczba ograniczeń'))
 experiment3 = Experiment(experiment=3, benchmark_mode=False, attribute='clustering', header=boldmath('k_{min}'))
 experiment4 = Experiment(experiment=4, benchmark_mode=False, attribute='sigma', header=boldmath('\sigma'))
 experiment5 = Experiment(experiment=5, benchmark_mode=False, attribute='margin', header=bold('Margines'))
@@ -266,3 +276,4 @@ experiment5 = Experiment(experiment=5, benchmark_mode=False, attribute='margin',
 # experiment5 = Experiment(experiment=5, benchmark_mode=False, attribute='standardized', caption='', label='')
 for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5]:
     table(experiment=experiment)
+# table(experiment=experiment2)

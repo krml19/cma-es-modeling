@@ -52,7 +52,7 @@ class AlgorithmRunner:
 
     @property
     def sql(self):
-        return "SELECT count(*) FROM experiments WHERE constraints_generator=? AND margin=? AND sigma=? AND k=? AND n=? AND seed=? AND name=? AND clustering=? AND standardized=?"
+        return "SELECT count(*) FROM experiments WHERE constraints_generator=? AND margin=? AND sigma=? AND k=? AND n=? AND seed=? AND name=? AND clustering=? AND standardized=? AND (train_tp + train_fn)=?"
 
     def check_if_table_is_empty(self, database: Database):
         check_if_table_exists = database.engine.execute("SELECT count(*) FROM main.experiments").fetchone()[0]
@@ -85,11 +85,12 @@ class AlgorithmRunner:
                 algorithm_params['seed'],
                 algorithm_params['model_name'],
                 algorithm_params['clustering_k_min'],
-                algorithm_params['scaler'])
+                algorithm_params['scaler'],
+                algorithm_params['train_sample'])
 
-    def data_source(self, constraints_generator: callable = cg.f_2n, sigma0: float = 2,
+    def data_source(self, constraints_generator: callable = cg.f_2np2, sigma0: float = 2,
                     margin: float = 1.1, scaler: bool = True, clustering_k_min: int = 0, benchmark_mode: bool = False,
-                    seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)):
+                    seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), train_sample: int = 500):
 
         experiments = []
         for seed in seeds:
@@ -107,13 +108,14 @@ class AlgorithmRunner:
                             'seed': seed,
                             'model_name': model,
                             'benchmark_mode': benchmark_mode,
+                            'train_sample': train_sample
                         })
 
                         experiments.append(inopts)
         return experiments
 
     def experiments_1(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
-        return [self.data_source(scaler=scaler, seeds=seeds, K=K, N=N, sigma0=2) for scaler in [True, False]]
+        return [self.data_source(scaler=scaler, seeds=seeds, K=K, N=N, sigma0=0.125) for scaler in [True, False]]
 
     def experiments_2(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
         return [self.data_source(constraints_generator=constraints_generator, seeds=seeds, K=K, N=N, scaler=True) for
@@ -128,6 +130,11 @@ class AlgorithmRunner:
     def experiments_5(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
         return [self.data_source(margin=margin, seeds=seeds, K=K, N=N, scaler=True) for margin in [0.9, 1, 1.1]]
 
+    def experiments_6(self, seeds: range = range(0, 30), N: range = range(2, 8)) -> list:
+        return [
+            self.data_source(margin=1.1, seeds=seeds, K=range(2, 3), N=N, scaler=True, constraints_generator=cg.f_n3,
+                             sigma0=0.125, train_sample=ts) for ts in [100, 200, 300, 400, 500]]
+
     def benchmarks(self) -> list:
         return [self.data_source(benchmark_mode=True)]
 
@@ -138,6 +145,7 @@ class AlgorithmRunner:
             3: self.experiments_3(seeds=seeds),
             4: self.experiments_4(seeds=seeds),
             5: self.experiments_5(seeds=seeds),
+            6: self.experiments_6(seeds=seeds),
             'benchmarks': self.benchmarks()
         }[key]
 
@@ -187,11 +195,12 @@ class AlgorithmRunner:
 
 if __name__ == '__main__':
     runner = AlgorithmRunner()
-    seeds = range(0, 8)
-    experiments = flat([runner.experiments_1(seeds=seeds),
-                        runner.experiments_2(seeds=seeds),
-                        runner.experiments_3(seeds=seeds),
-                        runner.experiments_4(seeds=seeds),
-                        runner.experiments_5(seeds=seeds)])
+    seeds = range(0, 5)
+    # experiments = flat([runner.experiments_1(seeds=seeds),
+    #                     runner.experiments_2(seeds=seeds),
+    #                     runner.experiments_3(seeds=seeds),
+    #                     runner.experiments_4(seeds=seeds),
+    #                     runner.experiments_5(seeds=seeds)])
+    experiments = runner.experiments_1(seeds=seeds)
     # runner.run(experiments)
     runner.run_slurm(experiments)

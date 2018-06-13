@@ -1,24 +1,25 @@
 import numpy as np
 import pandas as pd
+import sampler
 
 from ball import Ball
 from cube import Cube
 from simplex import Simplex
 from benchmark_model import BenchmarkModel
 from file_helper import Paths
-import Problem
-import sample
 
 
 class DataModel:
-    def __init__(self, name, k, n, seed):
+    test_n_rows = int(1e6)
+
+    def __init__(self, name, k, n, seed, train_samples: int = 500):
 
         self.benchmark_model = self.__get_model(name=name, k=k, n=n)
         self.filename = '{}_{}_{}_{}'.format(name.title(), k, n, seed)
-        self.problem = self.__problem(name)
         self.seed = seed
         self.n = n
         self.k = k
+        self.train_samples = train_samples
 
     def __get_model(self, name, k, n) -> BenchmarkModel:
         B = [1] * k
@@ -28,13 +29,6 @@ class DataModel:
             'simplex': Simplex(i=n, B=B),
         }[name]
 
-    def __problem(self, name):
-        return {
-            'ball': Problem.Ball,
-            'cube': Problem.Cube,
-            'simplex': Problem.Simplex
-        }[name]
-
     def __filename(self, path) -> str:
         return "{}_{}.csv.xz".format(path, self.filename)
 
@@ -42,13 +36,22 @@ class DataModel:
         return pd.read_csv(filename, nrows=nrows).values
 
     def train_set(self) -> np.ndarray:
-        return self.__get_dataset(self.__filename(Paths.train.value), nrows=500)
+        return self.__get_dataset(self.__filename(Paths.train.value), nrows=self.train_samples)
+
+    def data_set(self, seed: int):
+        while True:
+            samples = sampler.samples(self.benchmark_model.bounds, rows=DataModel.test_n_rows, seed=seed)
+            if samples[:, -1].astype(int).sum() > 3:
+                break
+            seed = seed + 1
+        return samples
 
     def test_set(self) -> tuple:
-        test = sample.dataset(int(1e6), n=self.n, k=self.k, seed=self.seed + 100, p=self.problem, classes=[0, 1])
+        seed = self.seed + 100
+        test = self.data_set(seed=seed)
         return test[:, :-1].astype(float), test[:, -1].astype(int)
 
     def valid_set(self) -> np.ndarray:
-        valid = sample.dataset(int(1e6), n=self.n, k=self.k, seed=self.seed + 1000, p=self.problem, classes=[0, 1])
+        seed = self.seed + 1000
+        valid = self.data_set(seed=seed)
         return valid[:, :-1].astype(float)
-
