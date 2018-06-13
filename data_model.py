@@ -49,9 +49,10 @@ class DataModel:
     def test_set(self) -> tuple:
         seed = self.seed + 100
         test = self.data_set(seed=seed)
-        return test[:, :-1].astype(float), test[:, -1].astype(int)
+
+        return test.astype(float), self.benchmark_model.valid(test)
 
     def valid_set(self) -> np.ndarray:
         seed = self.seed + 1000
         valid = self.data_set(seed=seed)
-        return valid[:, :-1].astype(float)
+        return valid.astype(float)

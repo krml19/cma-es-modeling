@@ -30,6 +30,9 @@ class BenchmarkModel:
     def _bounds(self, i, d):
         pass
 
+    def valid(self, X: np.ndarray):
+        return np.apply_along_axis(self.matches_constraints, 1, X).astype(int)
+
     def generate_valid_column(self, df):
         return df.apply(self.matches_constraints, axis=1)
 

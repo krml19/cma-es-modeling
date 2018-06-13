@@ -34,13 +34,13 @@ class CMAESAlgorithm:
         self.__w0 = np.repeat(1, self.__n_constraints)
         self.__x0 = x0
         log.debug('Creating train X')
-        self.__train_X = data_model.train_set()
+        self.train_X = data_model.train_set()
         log.debug('Creating valid X')
-        self.__valid_X = data_model.valid_set()
+        self.valid_X = data_model.valid_set()
         log.debug('Finished creating datasets')
-        self.__dimensions = self.__train_X.shape[1]
+        self.__dimensions = self.train_X.shape[1]
         self.__constraints_generator = constraints_generator
-        self.testX, self.testY = None, None
+        self.test_X, self.test_Y = None, None
         self.__sigma0 = sigma0
         self.__scaler = StandardScaler() if scaler else None
         self.__data_model = data_model
@@ -57,12 +57,12 @@ class CMAESAlgorithm:
         self.max_iter = max_iter
 
         if self.__scaler is not None:
-            self.__scaler.fit(self.__train_X)
-            self.__train_X = self.__scaler.transform(self.__train_X)
-            self.__valid_X = self.__scaler.transform(self.__valid_X)
+            self.__scaler.fit(self.train_X)
+            self.train_X = self.__scaler.transform(self.train_X)
+            self.valid_X = self.__scaler.transform(self.valid_X)
 
         if self.__clustering:
-            self.clusters = xmeans_clustering(self.__train_X, kmin=clustering_k_min, visualize=False)
+            self.clusters = xmeans_clustering(self.train_X, kmin=clustering_k_min, visualize=False)
 
     def satisfies_constraints(self, X: np.ndarray, w: np.ndarray, w0: np.ndarray) -> np.ndarray:
         x = np.matmul(X, w)
@@ -79,7 +79,7 @@ class CMAESAlgorithm:
         recall = tp / card_b
 
         # p
-        card_p, p = self.__valid_X.shape[0], self.matches_constraints(self.__valid_X, w, w0).sum()
+        card_p, p = self.valid_X.shape[0], self.matches_constraints(self.valid_X, w, w0).sum()
 
         # p_y
         pr_y = p / card_p
@@ -173,18 +173,18 @@ class CMAESAlgorithm:
         return np.concatenate(w).flatten(), np.concatenate(w0)
 
     def __draw_results(self, w, title=None):
-        if self.__valid_X.shape[1] > 4:
+        if self.valid_X.shape[1] > 4:
             return
 
         w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
         w0 = w[-1:]
         w = w[:-1]
 
-        names = ['x_{}'.format(x) for x in np.arange(self.__valid_X.shape[1])]
-        data = self.__valid_X if self.__scaler is None else self.__scaler.inverse_transform(self.__valid_X)
+        names = ['x_{}'.format(x) for x in np.arange(self.valid_X.shape[1])]
+        data = self.valid_X if self.__scaler is None else self.__scaler.inverse_transform(self.valid_X)
 
         valid = pd.DataFrame(data=data, columns=names)
-        valid['valid'] = pd.Series(data=self.matches_constraints(self.__valid_X, w, w0), name='valid')
+        valid['valid'] = pd.Series(data=self.matches_constraints(self.valid_X, w, w0), name='valid')
 
         train = self.current_cluster if self.__scaler is None else self.__scaler.inverse_transform(self.current_cluster)
         train = pd.DataFrame(data=train, columns=names)
@@ -204,13 +204,13 @@ class CMAESAlgorithm:
             _n = len(self.clusters)
             for i, cluster in enumerate(self.clusters, start=1):
                 log.debug("Started analyzing cluster: {}/{}".format(i, _n))
-                self.current_cluster = self.__train_X[cluster]
+                self.current_cluster = self.train_X[cluster]
                 cma_es = self.__cma_es()
                 self.__results.append(cma_es)
                 log.debug("Finished analyzing cluster: {}/{}".format(i, _n))
         else:
             log.debug("Started analyzing train dataset")
-            self.current_cluster = self.__train_X
+            self.current_cluster = self.train_X
             cma_es = self.__cma_es()
             self.__results.append(cma_es)
             log.debug("Finished analyzing train dataset")
@@ -218,12 +218,12 @@ class CMAESAlgorithm:
 
 
         log.debug('Creating test X, Y')
-        self.testX, self.testY = self.__data_model.test_set()
+        self.test_X, self.test_Y = self.__data_model.test_set()
         if self.__scaler is not None:
-            self.testX = self.__scaler.transform(self.testX)
+            self.test_X = self.__scaler.transform(self.test_X)
 
-        best_train = self.best(X=self.__train_X, V=self.__valid_X, Y=np.ones(self.__train_X.shape[0]))
-        best_test = self.best(X=self.testX, V=self.__valid_X, Y=self.testY)
+        best_train = self.best(X=self.train_X, V=self.valid_X, Y=np.ones(self.train_X.shape[0]))
+        best_test = self.best(X=self.test_X, V=self.valid_X, Y=self.test_Y)
 
         database = Database(database_filename='{}.sqlite'.format(self.db))
         experiment = database.new_experiment()
@@ -258,7 +258,7 @@ class CMAESAlgorithm:
             experiment['time'] = self.time_delta
             experiment['timestamp'] = time.time()
 
-            experiment['positives'] = self.testY.sum()
+            experiment['positives'] = self.test_Y.sum()
 
             for i, es in enumerate(self.__results):
                 es = es
