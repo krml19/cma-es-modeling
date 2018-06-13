@@ -290,9 +290,9 @@ class CMAESAlgorithm:
                  self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
 
 
-algorithm = CMAESAlgorithm(constraints_generator=cg.f_2n.__name__, sigma0=2, k=1,
-                           scaler=True, margin=1.1, clustering_k_min=2, model_name='simplex', n=5, seed=0, draw=False)
-algorithm.experiment()
+# algorithm = CMAESAlgorithm(constraints_generator=cg.f_2n.__name__, sigma0=2, k=1,
+#                            scaler=True, margin=1.1, clustering_k_min=2, model_name='simplex', n=5, seed=0, draw=False)
+# algorithm.experiment()
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
