@@ -31,7 +31,7 @@ class SlurmPool:
         sbatch.write("#!/bin/bash\n")
         sbatch.write("#SBATCH -p idss-student")
         sbatch.write("#SBATCH -c 1 --mem=1475\n")
-        sbatch.write("#SBATCH -t 8:00:00\n")
+        sbatch.write("#SBATCH -t 16:00:00\n")
         sbatch.write("#SBATCH -Q\n")
         sbatch.write("date\n")
         sbatch.write("hostname\n")
