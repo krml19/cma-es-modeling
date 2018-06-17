@@ -5,6 +5,7 @@ import scipy.stats as stats
 import runner
 import numpy as np
 from logger import Logger
+import time
 
 log = Logger(name='cma-es')
 
@@ -28,27 +29,29 @@ class Aggragator:
         connection.close()
 
         grouping_attributes = ['constraints_generator', 'clustering', 'margin', 'standardized', 'sigma', 'name', 'k', 'n']
-        self.get_info(df)
+        self.update_infp(df)
         df2 = df.groupby(grouping_attributes).apply(self.__get_stats)
         data_frame = self.__expand_dataframes(df2, self.attribute)
         return data_frame
 
-    def get_info(self, df: pd.DataFrame):
+    def update_infp(self, df: pd.DataFrame):
         info = dict()
 
         def reducer(X):
             return str(set(X.unique())).replace('\'', '')
 
-        # info['margin'] = df['margin'].iloc[0]
-        # info['n'] = "{} - {}".format(df['n'].min(), df['n'].max())
-        # info['k'] = "{} - {}".format(df['k'].min(), df['k'].max())
-        # info['margin'] = df['margin'].iloc[0]
-        # info['sigma'] = df['sigma'].iloc[0]
-        # info['standardized'] = reducer(df['standardized'])
-        # info['constraints_generator'] = reducer(df['constraints_generator'])
-        # info['clustering'] = reducer(df['clustering'])
-        # info['seed'] = reducer(df['seed'])
-        # info['total_experiments'] = df.shape[0]
+        info['date'] = time.asctime()
+        info['margin'] = df['margin'].iloc[0]
+        info['n'] = "{} - {}".format(df['n'].min(), df['n'].max())
+        info['k'] = "{} - {}".format(df['k'].min(), df['k'].max())
+        info['margin'] = df['margin'].iloc[0]
+        info['sigma'] = df['sigma'].iloc[0]
+        info['s'] = reducer(df['standardized'])
+        info['cq'] = reducer(df['constraints_generator'])
+        info['clustering'] = reducer(df['clustering'])
+        info['seed'] = reducer(df['seed'])
+        info['total'] = df.shape[0]
+
         info[self.attribute] = reducer(df[self.attribute])
 
         self.info = info

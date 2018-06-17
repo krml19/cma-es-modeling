@@ -144,6 +144,9 @@ class Component:
     value = None
     _template: str = None
 
+    def __init__(self, value=None):
+        self.value = value
+
     def build(self) -> str:
         return self._template.format(self.value) if self.value is not None else ''
 
@@ -164,10 +167,15 @@ class Curly(Component):
     _template = '{{{}}}'
 
 
+class Comment(Component):
+    _template = '% {}\n'
+
+
 class Environment:
     def __init__(self):
-        self._body: [str, type] = ''
+        self._body: [str, type, dict] = ''
         self.component_type: [str, None] = None
+        self.comment: CommentBlock = None
         self.bracket_options: Brackets = Brackets()
         self.curly_options: Curly = Curly()
 
@@ -183,10 +191,11 @@ class Environment:
         bracket_options = self.bracket_options.build()
         curly_options = self.curly_options.build()
         body = self.body.build() if isinstance(self.body, Environment) else self.body
-        return '\\begin{{{component}}}{curly}{brackets}\n' \
+        return '{comment}\n' \
+               '\\begin{{{component}}}{curly}{brackets}\n' \
                '{body}\n' \
                '\\end{{{component}}}\n'.format(component=self.component_type, curly=curly_options,
-                                               brackets=bracket_options, body=body)
+                                               brackets=bracket_options, body=body, comment=self.comment.build())
 
 
 class Centering(Environment):
@@ -230,6 +239,20 @@ class Tabular(Environment):
             Environment.body.fset(self, value)
 
 
+class CommentBlock:
+    body = None
+
+    def __init__(self, body):
+        self.body = body
+
+    def build(self):
+        if isinstance(self.body, dict):
+            items: dict = self.body
+            mapped_items = list(map(lambda item: Comment(value="%s\t\t%s" % (item[0], item[1])).build(), items.items()))
+            return reduce(lambda x, y: x + y, mapped_items)
+        return ''
+
+
 Experiment = namedtuple('Experiment', ['experiment', 'benchmark_mode', 'attribute', 'header'])
 
 
@@ -243,26 +266,18 @@ def table(experiment: Experiment):
 
     tabular = Tabular()
     tabular.body = data_table
+    tabular.comment = CommentBlock(aggregator.info)
 
     document = tabular.build()
 
-    info_table = InfoTable(info=aggregator.info)
-    info_tabular = Tabular()
-    info_tabular.body = info_table
-
-    info_document = info_tabular.build()
-    print(info_document)
     print(document)
 
     label = 'experiment{}'.format(experiment.experiment)
-    info_label = 'experiment{}-info'.format(experiment.experiment)
 
     if len(sys.argv) > 1:
         write_tex_table(filename=label, data=document, path=sys.argv[1])
-        write_tex_table(filename=info_label, data=info_document, path=sys.argv[1])
     else:
         write_tex_table(filename=label, data=document)
-        write_tex_table(filename=info_label, data=info_document)
 
 
 experiment1 = Experiment(experiment=1, benchmark_mode=False, attribute='standardized', header=bold('Standaryzacja'))
