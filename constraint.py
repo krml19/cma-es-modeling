@@ -1,6 +1,6 @@
 from enum import Enum
 import operator
-
+from functools import reduce
 
 class Operator(Enum):
     le = operator.le
@@ -31,6 +31,9 @@ class Constraint:
     def match(self, value) -> bool:
         return self._operator.compare(self.value, value)
 
+    def __str__(self):
+        return "[x %s %f]" % (self._operator._name_, self.value)
+
 
 class Constraints:
     def __init__(self, constraints):
@@ -38,3 +41,6 @@ class Constraints:
 
     def validate(self, value):
         return not (False in list(map(lambda constraint: constraint.match(value), self.constraints)))
+
+    def __str__(self):
+        return "constraints: {\n" + reduce(lambda x, y: str(x) + '\n' + str(y), self.constraints) + "\n}"

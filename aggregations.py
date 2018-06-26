@@ -29,12 +29,13 @@ class Aggragator:
         connection.close()
 
         grouping_attributes = ['constraints_generator', 'clustering', 'margin', 'standardized', 'sigma', 'name', 'k', 'n']
-        self.update_infp(df)
+
         df2 = df.groupby(grouping_attributes).apply(self.__get_stats)
         data_frame = self.__expand_dataframes(df2, self.attribute)
+        self.update_infp(df, df2)
         return data_frame
 
-    def update_infp(self, df: pd.DataFrame):
+    def update_infp(self, df: pd.DataFrame, df2: pd.DataFrame):
         info = dict()
 
         def reducer(X):
@@ -53,6 +54,9 @@ class Aggragator:
         info['total'] = df.shape[0]
 
         info[self.attribute] = reducer(df[self.attribute])
+        info[('model', 'attribute')] = 'len(seeds)'
+        for key, value, attribute in zip(df2['model'], df2['seeds'], df2[self.attribute]):
+            info[(key, attribute)] = value
 
         self.info = info
 
@@ -74,6 +78,7 @@ class Aggragator:
             'name': group['name'].iloc[0],
             'n': group['n'].iloc[0],
             'k': group['k'].iloc[0],
+            'seeds': group['seed'].nunique()
         }
         return pd.Series(results, name='metrics')
 

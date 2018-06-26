@@ -307,6 +307,6 @@ if __name__ == '__main__':
         args['seed'] = int(args['seed'])
         args['benchmark_mode'] = args['benchmark_mode'] == 'True'
         args['train_sample'] = int(args['train_sample'])
-        args['constraints_generator'] = args['constraints_generator']
+
         algorithm = CMAESAlgorithm(**args)
         algorithm.experiment()
