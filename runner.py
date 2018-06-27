@@ -89,7 +89,7 @@ class AlgorithmRunner:
                 algorithm_params['train_sample'])
 
     def data_source(self, constraints_generator: callable = cg.f_n3, sigma0: float = 1.0,
-                    margin: float = 1.0, scaler: bool = True, clustering_k_min: int = 0, benchmark_mode: bool = False,
+                    margin: float = 1.0, scaler: bool = True, clustering_k_min: int = 2, benchmark_mode: bool = False,
                     seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), train_sample: int = 500):
 
         experiments = []
@@ -115,10 +115,10 @@ class AlgorithmRunner:
         return experiments
 
     def experiments_1(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
-        return [self.data_source(scaler=scaler, seeds=seeds, K=K, N=N) for scaler in [True, False]]
+        return [self.data_source(scaler=scaler, seeds=seeds, K=K, N=N, constraints_generator=cg.f_2np2, clustering_k_min=0) for scaler in [True, False]]
 
     def experiments_2(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
-        return [self.data_source(constraints_generator=constraints_generator, seeds=seeds, K=K, N=N) for
+        return [self.data_source(constraints_generator=constraints_generator, seeds=seeds, K=K, N=N, clustering_k_min=0) for
                 constraints_generator in [cg.f_2n, cg.f_2np2, cg.f_n3, cg.f_2pn]]
 
     def experiments_3(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
@@ -199,8 +199,8 @@ if __name__ == '__main__':
     experiments = flat([
         # runner.experiments_1(seeds=seeds),
         # runner.experiments_2(seeds=seeds),
-        runner.experiments_3(seeds=seeds),
-        # runner.experiments_4(seeds=seeds),
+        # runner.experiments_3(seeds=seeds),
+        runner.experiments_4(seeds=seeds),
         # runner.experiments_5(seeds=seeds)
         ])
     # experiments = runner.experiments_1(seeds=seeds)
