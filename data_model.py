@@ -61,3 +61,6 @@ class DataModel:
         valid = self.dataset(seed=self.seed + 1000)
         return valid[:, :-1].astype(float)
 
+    def valid_set2(self) -> np.ndarray:
+        valid = self.dataset(seed=self.seed + 10000)
+        return valid[:, :-1].astype(float)

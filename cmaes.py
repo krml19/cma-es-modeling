@@ -223,7 +223,9 @@ class CMAESAlgorithm:
             self.test_X = self.__scaler.transform(self.test_X)
 
         best_train = self.best(X=self.train_X, V=self.valid_X, Y=np.ones(self.train_X.shape[0]))
-        best_test = self.best(X=self.test_X, V=self.valid_X, Y=self.test_Y)
+        V2 = self.__data_model.valid_set2()
+        V2 = self.__scaler.transform(V2) if self.__scaler is not None else V2
+        best_test = self.best(X=self.test_X, V=V2, Y=self.test_Y)
 
         database = Database(database_filename='{}.sqlite'.format(self.db))
         experiment = database.new_experiment()
@@ -260,7 +262,8 @@ class CMAESAlgorithm:
             experiment['timestamp'] = time.time()
 
             experiment['positives'] = self.test_Y.sum()
-
+            experiment['count_V'] = 2
+            
             for i, es in enumerate(self.__results):
 
                 W_start = self.split_w(es[8].x0, split_w=True)
