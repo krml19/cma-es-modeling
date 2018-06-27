@@ -1,0 +1,35 @@
+% This file was created by matplotlib2tikz v0.6.17.
+\begin{tikzpicture}
+
+\definecolor{color0}{rgb}{0.12156862745098,0.466666666666667,0.705882352941177}
+
+\begin{axis}[
+xlabel={$n$},
+ylabel={$V$},
+xmin=0.6, xmax=9.4,
+ymin=0.00148019195948281, ymax=0.659753955386447,
+ymode=log,
+tick align=outside,
+tick pos=left,
+x grid style={white!69.01960784313725!black},
+y grid style={white!69.01960784313725!black},
+legend entries={{$Objętość\, obszaru\, dopuszczalnego$}},
+legend cell align={left},
+legend style={draw=white!80.0!black}
+]
+\addlegendimage{no markers, color0}
+\addplot [semithick, color0]
+table {%
+1 0.5
+2 0.25
+3 0.125
+4 0.0625
+5 0.03125
+6 0.015625
+7 0.0078125
+8 0.00390625
+9 0.001953125
+};
+\end{axis}
+
+\end{tikzpicture}
