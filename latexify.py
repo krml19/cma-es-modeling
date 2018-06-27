@@ -7,9 +7,8 @@ import sys
 import logging
 
 eol = '\n'
-hline = '\hline'
 line_end = '\\\\'
-row_end = line_end + ' ' + hline
+row_end = line_end
 sep = ' & '
 pm = '\\,$\\pm$\\,'
 
@@ -93,17 +92,21 @@ class DataTable:
 
     def header(self):
         attributes = list(map(lambda x: convert_attribute_value(x), self.attribute_values))
-        return bold('problem') + sep + reduce(lambda x, y: x + sep + y, attributes)
+        return '\\midrule\n' + bold('problem') + sep + reduce(lambda x, y: x + sep + y, attributes)
 
     def top_caption(self, name, cols):
-        return '\\hline\n \multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=cols, alignment='|c|',
-                                                                                   name=name)
+        top = '\\toprule\n \multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=cols, alignment='c',
+                                                                                    name=name)
+        top = row(top)
+        header = row(self.header())
+        return top + header
 
     def concat_row(self, x: pd.Series):
-        return self.beautify_name(x.name) + sep + reduce(lambda xi, yi: xi + sep + yi, x)
+        component = '\\midrule\n' if x.name.split('_')[2] == '2' else ''
+        return component + self.beautify_name(x.name) + sep + reduce(lambda xi, yi: xi + sep + yi, x)
 
     def rank(self, data: pd.DataFrame):
-        result = bold("rank") + sep + reduce(lambda x, y: str(x) + sep + str(y),
+        result = '\\midrule\n' + bold("rank") + sep + reduce(lambda x, y: str(x) + sep + str(y),
                                              map(lambda x: "%0.2f" % x, data['rank'].mean()))
         return result
 
@@ -112,13 +115,11 @@ class DataTable:
         self.create_row_section(data)
 
         elements = list()
-        elements.append(self.top_caption(self.top_header_name, self.cols + 1))
-        elements.append(self.header())
         table_data = data['row'].apply(self.concat_row, axis=1)
         elements.extend(list(table_data))
         elements.append(self.rank(data))
         elements = list(map(lambda x: row(x), elements))
-        reduced: str = reduce(lambda x, y: x + y, elements)
+        reduced: str = self.top_caption(self.top_header_name, self.cols + 1) + reduce(lambda x, y: x + y, elements) + '\\bottomrule\n'
 
         return reduced
 
@@ -228,8 +229,8 @@ class Tabular(Environment):
     @Environment.body.setter
     def body(self, value):
         if isinstance(value, DataTable):
-            columns = ['r|'] * value.cols
-            columns = '|l|' + reduce(lambda x, y: x + y, columns)
+            columns = ['r'] * value.cols
+            columns = 'l' + reduce(lambda x, y: x + y, columns)
             self.curly_options.value = columns
             Environment.body.fset(self, value.create_table())
         elif isinstance(value, InfoTable):
