@@ -88,7 +88,7 @@ class AlgorithmRunner:
                 algorithm_params['scaler'],
                 algorithm_params['train_sample'])
 
-    def data_source(self, constraints_generator: callable = cg.f_2np2, sigma0: float = 1.0,
+    def data_source(self, constraints_generator: callable = cg.f_n3, sigma0: float = 1.0,
                     margin: float = 1.0, scaler: bool = True, clustering_k_min: int = 0, benchmark_mode: bool = False,
                     seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), train_sample: int = 500):
 
@@ -196,12 +196,13 @@ class AlgorithmRunner:
 if __name__ == '__main__':
     runner = AlgorithmRunner()
     seeds = range(0, 5)
-    experiments = flat([runner.experiments_1(seeds=seeds),
-                        runner.experiments_2(seeds=seeds),
-                        # runner.experiments_3(seeds=seeds),
-                        # runner.experiments_4(seeds=seeds),
-                        # runner.experiments_5(seeds=seeds)
-                       ])
+    experiments = flat([
+        # runner.experiments_1(seeds=seeds),
+        # runner.experiments_2(seeds=seeds),
+        runner.experiments_3(seeds=seeds),
+        # runner.experiments_4(seeds=seeds),
+        # runner.experiments_5(seeds=seeds)
+        ])
     # experiments = runner.experiments_1(seeds=seeds)
     # runner.run(experiments)
     runner.run_slurm(experiments)
