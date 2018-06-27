@@ -4,6 +4,7 @@ from functools import reduce
 from aggregations import Aggragator
 from file_helper import write_tex_table
 import sys
+import logging
 
 eol = '\n'
 hline = '\hline'
@@ -168,7 +169,7 @@ class Curly(Component):
 
 
 class Comment(Component):
-    _template = '% {}\n'
+    _template = '% {0: <20}\n'
 
 
 class Environment:
@@ -248,7 +249,7 @@ class CommentBlock:
     def build(self):
         if isinstance(self.body, dict):
             items: dict = self.body
-            mapped_items = list(map(lambda item: Comment(value="%s\t\t%s" % (item[0], item[1])).build(), items.items()))
+            mapped_items = list(map(lambda item: Comment(value="%25s\t\t%s" % (item[0], item[1])).build(), items.items()))
             return reduce(lambda x, y: x + y, mapped_items)
         return ''
 
