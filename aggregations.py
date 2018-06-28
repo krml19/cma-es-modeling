@@ -1,12 +1,13 @@
 import pandas as pd
 import sqlite3
-from sklearn.preprocessing import QuantileTransformer
+from sklearn.preprocessing import QuantileTransformer, MinMaxScaler
 import scipy.stats as stats
 import runner
 import numpy as np
 from logger import Logger
 import time
-
+import itertools
+from functools import reduce
 log = Logger(name='cma-es')
 
 
@@ -18,24 +19,62 @@ class Aggragator:
         self.attribute_values: list = None
         self.benchmark_mode = int(benchmark_mode)
         self.info = None
+        self.cm = None
 
-    def transform(self) -> pd.DataFrame:
+    def db(self):
         algorithm_runner = runner.AlgorithmRunner()
         sql = "SELECT * FROM experiments WHERE constraints_generator=? AND margin=? AND sigma=? AND k=? AND n=? AND seed=? AND name=? AND clustering=? AND standardized=? AND (train_tp + train_fn)=?"
         connection = sqlite3.connect("experiments.sqlite")
         queries = runner.flat(algorithm_runner.experiment(self.experiment, seeds=range(0, 30)))
-        df = pd.concat([pd.read_sql_query(sql=sql, params=algorithm_runner.convert_to_sql_params(q), con=connection) for q in queries])
+        df = pd.concat(
+            [pd.read_sql_query(sql=sql, params=algorithm_runner.convert_to_sql_params(q), con=connection) for q in
+             queries])
 
         connection.close()
+        df['train_sample'] = df['train_tp'] + df['train_fn']
+        return df
 
-        grouping_attributes = ['constraints_generator', 'clustering', 'margin', 'standardized', 'sigma', 'name', 'k', 'n']
+    def transform(self, split: [None, list] = None) -> pd.DataFrame:
+        db: pd.DataFrame = self.db()
+        grouping_attributes = ['constraints_generator', 'clustering', 'margin', 'standardized', 'sigma', 'name', 'k',
+                               'n', 'train_sample']
 
-        df2 = df.groupby(grouping_attributes).apply(self.__get_stats)
-        data_frame = self.__expand_dataframes(df2, self.attribute)
-        self.update_infp(df, df2)
-        return data_frame
+        # split = ['name', 'k']
+        if split is not None:
+            unique = [db[key].unique() for key in split]
+            combinations = list(itertools.product(*unique))
+            items = list()
+            for combination in combinations:
+                query = reduce(lambda x, y: x + ' & ' + y,
+                               map(lambda x: "{} == {}".format(x[0], '\'%s\'' % x[1] if isinstance(x[1], str) else x[1]), zip(split, list(combination))))
+                chunk = db.query(query)
+                df2 = chunk.groupby(grouping_attributes).apply(self.__get_stats)
+                data_frame = self.__expand_dataframes(df2, self.attribute)
+                items.append(data_frame)
+            return items
+        else:
+            df2 = db.groupby(grouping_attributes).apply(self.__get_stats)
+            data_frame = self.__expand_dataframes(df2, self.attribute)
+            self.update_info(db, df2)
+            return data_frame
 
-    def update_infp(self, df: pd.DataFrame, df2: pd.DataFrame):
+
+    def presicion(self, df: pd.DataFrame):
+        cm: pd.DataFrame = df.groupby(self.attribute).apply(self.__get_cm)
+        cm['precision'] = cm.apply(lambda s: (s['tp']) / (s['tp'] + s['fp']), axis=1)
+
+    def confusion_matrix(self, df: pd.DataFrame) -> pd.DataFrame:
+        cm: pd.DataFrame = df.groupby(self.attribute).apply(self.__get_cm)
+
+        cm = cm.apply(lambda s: s / cm.sum(axis=1), axis=0)
+
+        cm['accuracy'] = cm.apply(lambda s: (s['tp'] + s['tn']) / (s['tp'] + s['tn'] + s['fp'] + s['fn']), axis=1)
+        cm['precision'] = cm.apply(lambda s: (s['tp']) / (s['tp'] + s['fp']), axis=1)
+        cm['recall'] = cm.apply(lambda s: (s['tp']) / (s['tp'] + s['fn']), axis=1)
+
+        return cm
+
+    def update_info(self, df: pd.DataFrame, df2: pd.DataFrame):
         info = dict()
 
         def reducer(X):
@@ -82,6 +121,15 @@ class Aggragator:
         }
         return pd.Series(results, name='metrics')
 
+    def __get_cm(self, group):
+        results = {
+            'tp': group['tp'].mean(),
+            'tn': group['tn'].mean(),
+            'fp': group['fp'].mean(),
+            'fn': group['fn'].mean(),
+        }
+        return pd.Series(results, name='cm')
+
     def __normalize(self, series: pd.Series):
         scaler = QuantileTransformer()
         values = np.nan_to_num(series.values)
@@ -103,13 +151,3 @@ class Aggragator:
         data_frame[sem_norm_keys] = self.__normalize(data_frame['f_sem'])
 
         return data_frame
-
-
-
-
-# aggregator = Aggragator()
-# data_frame = aggregator.fit()
-#
-# table = DataTable(data_frame, 'Standaryzacja', attribute=aggregator.attribute, attribute_values=aggregator.attribute_values)
-# l = table.table()
-# print(l)
