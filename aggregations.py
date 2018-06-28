@@ -1,6 +1,6 @@
 import pandas as pd
 import sqlite3
-from sklearn.preprocessing import QuantileTransformer, MinMaxScaler
+from sklearn.preprocessing import QuantileTransformer
 import scipy.stats as stats
 import runner
 import numpy as np
@@ -39,7 +39,6 @@ class Aggragator:
         grouping_attributes = ['constraints_generator', 'clustering', 'margin', 'standardized', 'sigma', 'name', 'k',
                                'n', 'train_sample']
 
-        # split = ['name', 'k']
         if split is not None:
             unique = [db[key].unique() for key in split]
             combinations = list(itertools.product(*unique))
@@ -50,7 +49,7 @@ class Aggragator:
                 chunk = db.query(query)
                 df2 = chunk.groupby(grouping_attributes).apply(self.__get_stats)
                 data_frame = self.__expand_dataframes(df2, self.attribute)
-                items.append(data_frame)
+                items.append((data_frame, combination))
             return items
         else:
             df2 = db.groupby(grouping_attributes).apply(self.__get_stats)
@@ -117,6 +116,7 @@ class Aggragator:
             'name': group['name'].iloc[0],
             'n': group['n'].iloc[0],
             'k': group['k'].iloc[0],
+            'train_sample': group['train_sample'].iloc[0],
             'seeds': group['seed'].nunique()
         }
         return pd.Series(results, name='metrics')

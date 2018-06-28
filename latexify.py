@@ -4,7 +4,7 @@ from functools import reduce
 from aggregations import Aggragator
 from file_helper import write_tex_table
 import sys
-import logging
+import numpy as np
 
 eol = '\n'
 line_end = '\\\\'
@@ -59,13 +59,17 @@ def bold(text):
     return '\\textbf{{{input}}}'.format(input=text)
 
 
-def row(text):
-    return text + row_end + eol
+def bm(text):
+    if '$' in text:
+        return '$\\bm{{{}}}$'.format(text)
+    else:
+        return '\\textbf{{{input}}}'.format(input=text)
 
 
 class Formatter:
     @staticmethod
     def format_color(x: float) -> str:
+        x = np.round(x, decimals=5)
         return '{},{},{}'.format(1 - x, x, 0)
 
     @staticmethod
@@ -78,19 +82,23 @@ class Formatter:
                (Formatter.format_color(norm_rank), value, Formatter.format_error(error))
 
     @staticmethod
-    def format_header(attribute_values, cols, name):
+    def format_header(attribute_values, name):
         attributes = list(map(lambda x: convert_attribute_value(x), attribute_values))
-        header = bold('problem') + sep + reduce(lambda x, y: x + sep + y, attributes)
-        return '\\toprule\n ' \
-               '\multicolumn{{{count}}}{{{alignment}}}{{{name}}} \\\\ \n' \
-               '\\midrule\n' \
-               '{header} \\\\ \n'.format(count=cols, alignment='c', name=name, header=header)
+        header = bm(name) + sep + reduce(lambda x, y: x + sep + y, attributes)
+        return header
 
     @staticmethod
     def format_model_name(name):
-        components = name.split('_')
-        return '${name}_{{{n}}}^{{{k}}}$'.format(name=components[0], n=components[2], k=components[1]) if len(
-            components) == 3 else name
+        if isinstance(name, tuple):
+            components = list(name)
+        elif isinstance(name, list):
+            components = name
+        else:
+            components = name.split('_')
+        formats = ['%s', '^{%s}', '_{%s}']
+        items = [format % component for format, component in zip(formats, components)]
+
+        return '$%s$' % reduce(lambda x, y: x + y, items).title()
 
 
 class DataTable:
@@ -102,36 +110,75 @@ class DataTable:
         self.attribute_values = attribute_values
         self.top_header_name = top_header_name
         self.data = data
+        self.title: str = ''
 
     def create_row_section(self, df: pd.DataFrame):
         keys = [('row', key) for key in self.attribute_values]
-        df[keys] = df.apply(self.create_row, axis=1)
+        df[keys] = df.apply(self.format_series_element, axis=1)
 
-    def create_row(self, series: pd.Series):
+    def format_series_element(self, series: pd.Series):
         unstucked = series.unstack().apply(
             lambda row: Formatter.format_cell(row['rank_norm'], row['f_mean'], row['sem_norm']))
         return unstucked
 
     def concat_row(self, x: pd.Series):
         component = '\\midrule\n' if x.name.split('_')[2] == '2' else ''
-        return component + Formatter.format_model_name(x.name) + sep + reduce(lambda xi, yi: xi + sep + yi, x) + row_end + eol
+        return component + Formatter.format_model_name(x.name) + sep + reduce(lambda xi, yi: xi + sep + yi,
+                                                                              x) + row_end + eol
 
     def rank(self, data: pd.DataFrame):
         result = '\\midrule\n' + bold("rank") + sep + reduce(lambda x, y: str(x) + sep + str(y),
-                                                             map(lambda x: "%0.2f" % x, data['rank'].mean())) + row_end + eol
+                                                             map(lambda x: "%0.2f" % x,
+                                                                 data['rank'].mean())) + row_end + eol
         return result
 
-    def create_table(self) -> str:
+    def build(self) -> str:
         data = self.data.round(decimals=self.decimals)
         self.create_row_section(data)
 
         table_data = data['row'].apply(self.concat_row, axis=1)
         elements = list(table_data)
         elements.append(self.rank(data))
-        header = Formatter.format_header(self.attribute_values, self.cols + 1, self.top_header_name)
-        reduced: str = header + reduce(lambda x, y: x + y, elements) + '\\bottomrule\n'
+        header = Formatter.format_header(self.attribute_values, self.title)
+        reduced: str = reduce(lambda x, y: x + y, elements)
 
+        return '\\toprule\n ' \
+               '\multicolumn{{{count}}}{{{alignment}}}{{{name}}} \\\\ \n' \
+               '\\midrule\n' \
+               '{header} \\\\ \n' \
+               '{body}' \
+               '\\bottomrule\n'.format(count=self.cols + 1, alignment='c', name=self.top_header_name, header=header,
+                                       body=reduced)
+
+
+class DataPivotTable(DataTable):
+    def __init__(self, data: pd.DataFrame, top_header_name: str, attribute: str, attribute_values: list):
+        super().__init__(data=data, top_header_name=top_header_name, attribute=attribute,
+                         attribute_values=attribute_values)
+        self.data: pd.DataFrame = self.data.T
+
+    def format_series(self, series):
+        col_formatter = lambda s, attribute: Formatter.format_cell(s[('rank_norm', attribute)],
+                                                                   s[('f_mean', attribute)],
+                                                                   s[('sem_norm', attribute)])
+        reducer = lambda x, y: x + sep + y
+        formatted_cols = [col_formatter(series, attribute) for attribute in self.attribute_values]
+        formatted_name = Formatter.format_model_name(series.name)
+        reduced = formatted_name + sep + reduce(reducer, formatted_cols)
         return reduced
+
+    def build(self) -> str:
+        header = Formatter.format_header(self.attribute_values, self.title)
+        reducer = lambda x, y: x + row_end + eol + y
+        body = reduce(reducer, self.data.apply(self.format_series))
+
+        return '\\toprule\n' \
+               '\multicolumn{{{count}}}{{{alignment}}}{{{name}}} \\\\ \n' \
+               '\\midrule\n' \
+               '{header} \\\\\n' \
+               '{body} \\\\\n' \
+               '\\bottomrule\n'.format(count=self.cols + 1, alignment='c', name=self.top_header_name,
+                                       header=header, body=body)
 
 
 class InfoTable:
@@ -269,17 +316,12 @@ class Tabular(Environment):
 
     @Environment.body.setter
     def body(self, value):
-        if isinstance(value, DataTable):
-            columns = ['r'] * value.cols
-            columns = 'l' + reduce(lambda x, y: x + y, columns)
-            self.curly_options.value = columns
-            Environment.body.fset(self, value.create_table())
-        elif isinstance(value, InfoTable):
-            columns = 'c' * len(value.info)
+        if isinstance(value, DataTable) or isinstance(value, ConfusionMatrix) or isinstance(value, DataPivotTable):
+            columns = 'l' + 'r' * value.cols
             self.curly_options.value = columns
             Environment.body.fset(self, value.build())
-        elif isinstance(value, ConfusionMatrix):
-            columns = 'l' + 'r' * value.cols
+        elif isinstance(value, InfoTable):
+            columns = 'c' * len(value.info)
             self.curly_options.value = columns
             Environment.body.fset(self, value.build())
         else:
@@ -301,43 +343,61 @@ class CommentBlock:
         return ''
 
 
-Experiment = namedtuple('Experiment', ['experiment', 'benchmark_mode', 'attribute', 'header'])
+class Experiment:
+    def __init__(self, index: int, attribute, header, table, split, benchmark_mode=False):
+        self.index = index
+        self.attribute = attribute
+        self.header = header
+        self.table = table
+        self.split = split
+        self.benchmark_mode = benchmark_mode
 
 
 def table(experiment: Experiment):
-    aggregator = Aggragator(experiment=experiment.experiment, benchmark_mode=experiment.benchmark_mode,
+    aggregator = Aggragator(experiment=experiment.index, benchmark_mode=experiment.benchmark_mode,
                             attribute=experiment.attribute)
-    data_frame = aggregator.transform()
 
-    data_table = DataTable(data_frame, experiment.header, attribute=aggregator.attribute,
-                           attribute_values=aggregator.attribute_values)
+    data_frame = aggregator.transform(split=experiment.split)
+    if isinstance(data_frame, list):
+        for data in data_frame:
+            title = bm('$n \\backslash |X|$')
+            experiment.header = Formatter.format_model_name(data[1])
+            save(experiment=experiment, aggregator=aggregator, data_frame=data[0], filename=
+            'experiment%d-%s-%d' % (experiment.index, data[1][0], data[1][1]), title=title)
+    else:
+        save(experiment=experiment, aggregator=aggregator, data_frame=data_frame,
+             filename='experiment%d' % experiment.index)
+
+
+def save(experiment: Experiment, aggregator: Aggragator, data_frame: pd.DataFrame, title='problem',
+         filename='experiment'):
+    data_table = experiment.table(data_frame, experiment.header, attribute=aggregator.attribute,
+                                  attribute_values=aggregator.attribute_values)
+    data_table.title = title
 
     tabular = Tabular()
     tabular.body = data_table
     tabular.comment = CommentBlock(aggregator.info)
 
-    document = tabular.build()
-
-    print(document)
-    # cm = ConfusionMatrix(aggregator.cm)
-    # tabular2 = Tabular()
-    # tabular2.body = cm
-    # cm_info = tabular2.build()
-    # print(cm_info)
-
     if len(sys.argv) > 1:
-        write_tex_table(filename='experiment%d' % experiment.experiment, data=document, path=sys.argv[1])
-        # write_tex_table(filename='cm%d' % experiment.experiment, data=cm_info, path=sys.argv[1])
+        write_tex_table(filename=filename, data=tabular.build(), path=sys.argv[1])
 
 
 if __name__ == '__main__':
-    experiment1 = Experiment(experiment=1, benchmark_mode=False, attribute='standardized', header=bold('Standaryzacja'))
-    experiment2 = Experiment(experiment=2, benchmark_mode=False, attribute='constraints_generator',
-                             header=bold('Liczba ograniczeń'))
-    experiment3 = Experiment(experiment=3, benchmark_mode=False, attribute='clustering', header=boldmath('k_{min}'))
-    experiment4 = Experiment(experiment=4, benchmark_mode=False, attribute='sigma', header=boldmath('\sigma'))
-    experiment5 = Experiment(experiment=5, benchmark_mode=False, attribute='margin', header=bold('Margines'))
-    experiment6 = Experiment(experiment=6, benchmark_mode=False, attribute='train_sample', header=bold('|X|'))
+    experiment1 = Experiment(index=1, attribute='standardized', header=bold('Standaryzacja'), table=DataTable,
+                             split=None)
+    experiment2 = Experiment(index=2, attribute='constraints_generator', header=bold('Liczba ograniczeń'),
+                             table=DataTable, split=None)
+    experiment3 = Experiment(index=3, attribute='clustering', header=boldmath('k_{min}'),
+                             table=DataTable, split=None)
+    experiment4 = Experiment(index=4, attribute='sigma', header=boldmath('\sigma'),
+                             table=DataTable, split=None)
+    experiment5 = Experiment(index=5, attribute='margin', header=bold('Margines'),
+                             table=DataTable, split=None)
+    experiment6 = Experiment(index=6, attribute='train_sample', header=bold('|X|'),
+                             table=DataPivotTable, split=['name', 'k'])
 
-    for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5]:
+    # for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
+    # for experiment in [experiment6]:
+    for experiment in [experiment1]:
         table(experiment=experiment)

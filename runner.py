@@ -132,7 +132,7 @@ class AlgorithmRunner:
 
     def experiments_6(self, seeds: range = range(0, 30), N: range = range(2, 8)) -> list:
         return [
-            self.data_source(margin=1.1, seeds=seeds, K=range(2, 3), N=N, train_sample=ts) for ts in [100, 200, 300, 400, 500]]
+            self.data_source(seeds=seeds, K=range(2, 3), N=N, train_sample=ts) for ts in [100, 200, 300, 400, 500]]
 
     def benchmarks(self) -> list:
         return [self.data_source(benchmark_mode=True)]
