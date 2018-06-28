@@ -261,7 +261,7 @@ class CMAESAlgorithm:
             experiment['time'] = self.time_delta
             experiment['timestamp'] = time.time()
 
-            experiment['positives'] = self.test_Y.sum()
+            experiment['positives'] = int(self.test_Y.sum())
             experiment['count_V'] = 2
             
             for i, es in enumerate(self.__results):
