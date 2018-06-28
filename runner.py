@@ -88,7 +88,7 @@ class AlgorithmRunner:
                 algorithm_params['scaler'],
                 algorithm_params['train_sample'])
 
-    def data_source(self, constraints_generator: callable = cg.f_n3, sigma0: float = 1.0,
+    def data_source(self, constraints_generator: callable = cg.f_n3, sigma0: float = 0.5,
                     margin: float = 1.0, scaler: bool = True, clustering_k_min: int = 2, benchmark_mode: bool = False,
                     seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), train_sample: int = 500):
 
@@ -115,17 +115,18 @@ class AlgorithmRunner:
         return experiments
 
     def experiments_1(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
-        return [self.data_source(scaler=scaler, seeds=seeds, K=K, N=N, constraints_generator=cg.f_2np2, clustering_k_min=0) for scaler in [True, False]]
+        return [self.data_source(scaler=scaler, seeds=seeds, K=K, N=N, constraints_generator=cg.f_2np2,
+                                 clustering_k_min=0, sigma0=1.0, margin=1.0) for scaler in [True, False]]
 
     def experiments_2(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
-        return [self.data_source(constraints_generator=constraints_generator, seeds=seeds, K=K, N=N, clustering_k_min=0) for
-                constraints_generator in [cg.f_2n, cg.f_2np2, cg.f_n3, cg.f_2pn]]
+        return [self.data_source(constraints_generator=constraints_generator, seeds=seeds, K=K, N=N, clustering_k_min=0,
+                                 sigma0=1.0, margin=1.0) for constraints_generator in [cg.f_2n, cg.f_2np2, cg.f_n3, cg.f_2pn]]
 
     def experiments_3(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
-        return [self.data_source(clustering_k_min=kmin, seeds=seeds, K=K, N=N) for kmin in [0, 1, 2]]
+        return [self.data_source(clustering_k_min=kmin, seeds=seeds, K=K, N=N, sigma0=1.0, margin=1.0) for kmin in [0, 1, 2]]
 
     def experiments_4(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
-        return [self.data_source(sigma0=sigma, seeds=seeds, K=K, N=N) for sigma in [0.125, 0.25, 0.5, 1, 2]]
+        return [self.data_source(sigma0=sigma, seeds=seeds, K=K, N=N, margin=1.0) for sigma in [0.125, 0.25, 0.5, 1, 2]]
 
     def experiments_5(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
         return [self.data_source(margin=margin, seeds=seeds, K=K, N=N) for margin in [0.9, 1, 1.1]]
@@ -199,8 +200,8 @@ if __name__ == '__main__':
         # runner.experiments_1(seeds=seeds),
         # runner.experiments_2(seeds=seeds),
         # runner.experiments_3(seeds=seeds),
-        runner.experiments_4(seeds=seeds),
-        # runner.experiments_5(seeds=seeds)
+        # runner.experiments_4(seeds=seeds),
+        runner.experiments_5(seeds=seeds)
         ])
     # experiments = runner.experiments_1(seeds=seeds)
     # runner.run(experiments)
