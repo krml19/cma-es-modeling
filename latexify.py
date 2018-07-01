@@ -161,16 +161,17 @@ class DataPivotTable(DataTable):
         col_formatter = lambda s, attribute: Formatter.format_cell(s[('rank_norm', attribute)],
                                                                    s[('f_mean', attribute)],
                                                                    s[('sem_norm', attribute)])
-        reducer = lambda x, y: x + sep + y
+        # reducer = lambda x, y: x + sep + y
         formatted_cols = [col_formatter(series, attribute) for attribute in self.attribute_values]
-        formatted_name = Formatter.format_model_name(series.name)
-        reduced = formatted_name + sep + reduce(reducer, formatted_cols)
-        return reduced
+        # formatted_name = Formatter.format_model_name(series.name)
+        # reduced = formatted_name + sep + reduce(reducer, formatted_cols)
+        return (series.name, formatted_cols)
 
     def build(self) -> str:
         header = Formatter.format_header(self.attribute_values, self.title)
         reducer = lambda x, y: x + row_end + eol + y
-        body = reduce(reducer, self.data.apply(self.format_series))
+        body = self.data.apply(self.format_series)
+        body = reduce(reducer, body)
 
         return '\\toprule\n' \
                '\multicolumn{{{count}}}{{{alignment}}}{{{name}}} \\\\ \n' \
@@ -397,7 +398,7 @@ if __name__ == '__main__':
     experiment6 = Experiment(index=6, attribute='train_sample', header=bold('|X|'),
                              table=DataPivotTable, split=['name', 'k'])
 
-    for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
-    # for experiment in [experiment6]:
+    # for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
+    for experiment in [experiment6]:
     # for experiment in [experiment1]:
         table(experiment=experiment)

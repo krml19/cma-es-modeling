@@ -197,10 +197,10 @@ if __name__ == '__main__':
     runner = AlgorithmRunner()
     seeds = range(0, 5)
     experiments = flat([
-        # runner.experiments_1(seeds=seeds),
-        # runner.experiments_2(seeds=seeds),
-        # runner.experiments_3(seeds=seeds),
-        # runner.experiments_4(seeds=seeds),
+        runner.experiments_1(seeds=seeds),
+        runner.experiments_2(seeds=seeds),
+        runner.experiments_3(seeds=seeds),
+        runner.experiments_4(seeds=seeds),
         runner.experiments_5(seeds=seeds)
         ])
     # experiments = runner.experiments_1(seeds=seeds)
