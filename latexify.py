@@ -1,10 +1,12 @@
-from collections import namedtuple
 import pandas as pd
 from functools import reduce
 from aggregations import Aggragator
 from file_helper import write_tex_table
 import sys
 import numpy as np
+from logger import Logger
+
+log = Logger(name='latex')
 
 eol = '\n'
 line_end = '\\\\'
@@ -192,15 +194,15 @@ class DataPivotTable(DataTable):
         body = body.apply(self.format_row, axis=1)
         body = reduce(reducer, body.values)
 
-        return '\\toprule\n' \
-               '\multicolumn{{{count}}}{{{alignment}}}{{{name}}} \\\\ \n' \
-               '\\midrule\n' \
-               '{header} \\\\\n' \
-               '\\midrule\n' \
-               '{body} \\\\\n' \
-               '\\midrule\n' \
-               '{rank} \\\\\n' \
-               '\\bottomrule\n'.format(count=self.cols + 1, alignment='c', name=self.top_header_name,
+        return '\\toprule \n' \
+               '\\multicolumn{{{count}}}{{{alignment}}}{{{name}}} \\\\ \n' \
+               '\\midrule \n' \
+               '{header} \\\\ \n' \
+               '\\midrule \n' \
+               '{body} \\\\ \n' \
+               '\\midrule \n' \
+               '{rank} \\\\ \n' \
+               '\\bottomrule \n'.format(count=self.cols + 1, alignment='c', name=self.top_header_name,
                                        header=header, body=body, rank=rank)
 
 
@@ -375,6 +377,9 @@ class Experiment:
         self.split = split
         self.benchmark_mode = benchmark_mode
 
+    def __str__(self):
+        return "Experiment %d:{%s} " % (self.index, self.attribute)
+
 
 def table(experiment: Experiment):
     aggregator = Aggragator(experiment=experiment.index, benchmark_mode=experiment.benchmark_mode,
@@ -394,6 +399,7 @@ def table(experiment: Experiment):
 
 def save(experiment: Experiment, aggregator: Aggragator, data_frame: pd.DataFrame, title='problem',
          filename='experiment'):
+    log.info("Start: %s" % experiment)
     data_table = experiment.table(data_frame, experiment.header, attribute=aggregator.attribute,
                                   attribute_values=aggregator.attribute_values)
     data_table.title = title
@@ -402,25 +408,27 @@ def save(experiment: Experiment, aggregator: Aggragator, data_frame: pd.DataFram
     tabular.body = data_table
     tabular.comment = CommentBlock(aggregator.info)
 
+    log.info("Writing: %s" % experiment)
     if len(sys.argv) > 1:
         write_tex_table(filename=filename, data=tabular.build(), path=sys.argv[1])
+    log.info("Finished: %s" % experiment)
 
 
 if __name__ == '__main__':
     experiment1 = Experiment(index=1, attribute='standardized', header=bold('Standaryzacja'), table=DataPivotTable,
                              split=None)
     experiment2 = Experiment(index=2, attribute='constraints_generator', header=bold('Liczba ograniczeń'),
-                             table=DataTable, split=None)
+                             table=DataPivotTable, split=None)
     experiment3 = Experiment(index=3, attribute='clustering', header=boldmath('k_{min}'),
-                             table=DataTable, split=None)
+                             table=DataPivotTable, split=None)
     experiment4 = Experiment(index=4, attribute='sigma', header=boldmath('\sigma'),
-                             table=DataTable, split=None)
+                             table=DataPivotTable, split=None)
     experiment5 = Experiment(index=5, attribute='margin', header=bold('Margines'),
-                             table=DataTable, split=None)
+                             table=DataPivotTable, split=None)
     experiment6 = Experiment(index=6, attribute='train_sample', header=bold('|X|'),
                              table=DataPivotTable, split=['name', 'k'])
 
-    # for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
+    for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
     # for experiment in [experiment6]:
-    for experiment in [experiment1]:
+    # for experiment in [experiment1]:
         table(experiment=experiment)
