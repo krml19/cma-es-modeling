@@ -88,6 +88,14 @@ class Formatter:
         return header
 
     @staticmethod
+    def first_row_formatter(value):
+        return Formatter.format_model_name(value)
+
+    @staticmethod
+    def format_rank(series: pd.Series):
+        return bold(series.name) + sep + reduce(lambda x, y: str(x) + sep + str(y), series.apply(lambda x: "%0.2f" % x))
+
+    @staticmethod
     def format_model_name(name):
         if isinstance(name, tuple):
             components = list(name)
@@ -152,34 +160,48 @@ class DataTable:
 
 
 class DataPivotTable(DataTable):
-    def __init__(self, data: pd.DataFrame, top_header_name: str, attribute: str, attribute_values: list):
+    def __init__(self, data: pd.DataFrame, top_header_name: str, attribute: str, attribute_values: list,
+                 pivot: bool = True, header_formatter=Formatter.format_header, row_formatter=Formatter.first_row_formatter):
         super().__init__(data=data, top_header_name=top_header_name, attribute=attribute,
                          attribute_values=attribute_values)
         self.data: pd.DataFrame = self.data.T
+        self.pivot = pivot
+        self.formatters = {'header': header_formatter,
+                           'first_row': row_formatter}
 
     def format_series(self, series):
         col_formatter = lambda s, attribute: Formatter.format_cell(s[('rank_norm', attribute)],
                                                                    s[('f_mean', attribute)],
                                                                    s[('sem_norm', attribute)])
-        # reducer = lambda x, y: x + sep + y
         formatted_cols = [col_formatter(series, attribute) for attribute in self.attribute_values]
-        # formatted_name = Formatter.format_model_name(series.name)
-        # reduced = formatted_name + sep + reduce(reducer, formatted_cols)
-        return (series.name, formatted_cols)
+        return pd.Series(data=formatted_cols, name=series.name)
+
+    def format_row(self, series: pd.Series):
+        return self.formatters['first_row'](series.name) + sep + reduce(lambda x, y: x + sep + y, series)
+
+    def rank(self, data: pd.DataFrame):
+        return pd.Series(data=data.loc['rank'].mean(axis=1), name='rank')
 
     def build(self) -> str:
-        header = Formatter.format_header(self.attribute_values, self.title)
-        reducer = lambda x, y: x + row_end + eol + y
+        header = self.formatters['header'](self.attribute_values, self.title)
+        reducer = lambda x, y: str(x) + row_end + eol + str(y)
+        rank = Formatter.format_rank(self.rank(self.data))
+
         body = self.data.apply(self.format_series)
-        body = reduce(reducer, body)
+        body = body.T if self.pivot else body
+        body = body.apply(self.format_row, axis=1)
+        body = reduce(reducer, body.values)
 
         return '\\toprule\n' \
                '\multicolumn{{{count}}}{{{alignment}}}{{{name}}} \\\\ \n' \
                '\\midrule\n' \
                '{header} \\\\\n' \
+               '\\midrule\n' \
                '{body} \\\\\n' \
+               '\\midrule\n' \
+               '{rank} \\\\\n' \
                '\\bottomrule\n'.format(count=self.cols + 1, alignment='c', name=self.top_header_name,
-                                       header=header, body=body)
+                                       header=header, body=body, rank=rank)
 
 
 class InfoTable:
@@ -385,7 +407,7 @@ def save(experiment: Experiment, aggregator: Aggragator, data_frame: pd.DataFram
 
 
 if __name__ == '__main__':
-    experiment1 = Experiment(index=1, attribute='standardized', header=bold('Standaryzacja'), table=DataTable,
+    experiment1 = Experiment(index=1, attribute='standardized', header=bold('Standaryzacja'), table=DataPivotTable,
                              split=None)
     experiment2 = Experiment(index=2, attribute='constraints_generator', header=bold('Liczba ograniczeń'),
                              table=DataTable, split=None)
@@ -399,6 +421,6 @@ if __name__ == '__main__':
                              table=DataPivotTable, split=['name', 'k'])
 
     # for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
-    for experiment in [experiment6]:
-    # for experiment in [experiment1]:
+    # for experiment in [experiment6]:
+    for experiment in [experiment1]:
         table(experiment=experiment)
