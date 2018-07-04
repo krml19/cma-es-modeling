@@ -31,7 +31,7 @@ class SlurmPool:
         sbatch.write("#!/bin/bash\n")
         sbatch.write("#SBATCH -p idss-student")
         sbatch.write("#SBATCH -c 1 --mem=1475\n")
-        sbatch.write("#SBATCH -t 4:00:00\n")
+        sbatch.write("#SBATCH -t 24:00:00\n")
         sbatch.write("#SBATCH -Q\n")
         sbatch.write("date\n")
         sbatch.write("hostname\n")
@@ -133,7 +133,7 @@ class AlgorithmRunner:
 
     def experiments_6(self, seeds: range = range(0, 30), N: range = range(2, 8)) -> list:
         return [
-            self.data_source(seeds=seeds, K=range(2, 3), N=N, train_sample=ts) for ts in [100, 200, 300, 400, 500]]
+            self.data_source(seeds=seeds, K=range(1, 3), N=N, train_sample=ts) for ts in [100, 200, 300, 400, 500]]
 
     def benchmarks(self) -> list:
         return [self.data_source(benchmark_mode=True)]
@@ -197,11 +197,11 @@ if __name__ == '__main__':
     runner = AlgorithmRunner()
     seeds = range(0, 5)
     experiments = flat([
-        # runner.experiments_1(seeds=seeds),
-        # runner.experiments_2(seeds=seeds),
-        # runner.experiments_3(seeds=seeds),
-        # runner.experiments_4(seeds=seeds),
-        # runner.experiments_5(seeds=seeds),
+        runner.experiments_1(seeds=seeds),
+        runner.experiments_2(seeds=seeds),
+        runner.experiments_3(seeds=seeds),
+        runner.experiments_4(seeds=seeds),
+        runner.experiments_5(seeds=seeds),
         runner.experiments_6(seeds=seeds)
         ])
     # experiments = runner.experiments_1(seeds=seeds)

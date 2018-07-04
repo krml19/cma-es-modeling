@@ -426,9 +426,9 @@ if __name__ == '__main__':
     experiment5 = Experiment(index=5, attribute='margin', header=bold('Margines'),
                              table=DataPivotTable, split=None)
     experiment6 = Experiment(index=6, attribute='train_sample', header=bold('|X|'),
-                             table=DataPivotTable, split=['name', 'k'])
+                             table=DataPivotTable, split=None)
 
-    for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
-    # for experiment in [experiment6]:
+    # for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
+    for experiment in [experiment6]:
     # for experiment in [experiment1]:
         table(experiment=experiment)
