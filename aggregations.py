@@ -143,7 +143,7 @@ class Aggragator:
     def __normalize(self, series: pd.Series):
         scaler = QuantileTransformer()
         series = series.fillna(0)
-        scaler.fit(series.valuess.reshape(-1, 1))
+        scaler.fit(series.values.reshape(-1, 1))
         series = series.applymap(lambda x: scaler.transform(x)[0][0])
         return series
 
