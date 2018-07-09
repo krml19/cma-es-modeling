@@ -146,6 +146,7 @@ class AlgorithmRunner:
             4: self.experiments_4(seeds=seeds),
             5: self.experiments_5(seeds=seeds),
             6: self.experiments_6(seeds=seeds),
+            'best': [self.data_source(seeds=seeds)],
             'benchmarks': self.benchmarks()
         }[key]
 

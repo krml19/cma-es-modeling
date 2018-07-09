@@ -9,10 +9,15 @@ import time
 import itertools
 from functools import reduce
 log = Logger(name='cma-es')
+import math
+
+def identity(x):
+    print(x)
+    return x
 
 
 class Aggragator:
-    def __init__(self, experiment: int, attribute: str, benchmark_mode: bool = False):
+    def __init__(self, experiment, attribute: str = None, benchmark_mode: bool = False):
 
         self.attribute = attribute
         self.experiment = experiment
@@ -32,6 +37,7 @@ class Aggragator:
 
         connection.close()
         df['train_sample'] = df['train_tp'] + df['train_fn']
+
         return df
 
     def transform(self, split: [None, list] = None) -> pd.DataFrame:
@@ -62,16 +68,20 @@ class Aggragator:
         cm: pd.DataFrame = df.groupby(self.attribute).apply(self.__get_cm)
         cm['precision'] = cm.apply(lambda s: (s['tp']) / (s['tp'] + s['fp']), axis=1)
 
-    def confusion_matrix(self, df: pd.DataFrame) -> pd.DataFrame:
-        cm: pd.DataFrame = df.groupby(self.attribute).apply(self.__get_cm)
+    def confusion_matrix(self):
+        df = self.db()
+        cm = pd.DataFrame()
 
-        cm = cm.apply(lambda s: s / cm.sum(axis=1), axis=0)
+        cm['ACC'] = (df.tp + df.tn) / (df.tp + df.tn + df.fp + df.fn)
+        cm['p'] = df.tp / (df.tp + df.fp)
+        cm['r'] = df.tp / (df.tp + df.fn)
+        cm['F_1'] = 2 * df.tp / (2 * df.tp + df.fp + df.fn)
+        cm['MCC'] = (df.tp * df.tn - df.fp * df.fn) / ((df.tp + df.fp) * (df.tp + df.fn) * (df.tn + df.fp) * (df.tn + df.fn)).apply(lambda x: math.sqrt(x))
 
-        cm['accuracy'] = cm.apply(lambda s: (s['tp'] + s['tn']) / (s['tp'] + s['tn'] + s['fp'] + s['fn']), axis=1)
-        cm['precision'] = cm.apply(lambda s: (s['tp']) / (s['tp'] + s['fp']), axis=1)
-        cm['recall'] = cm.apply(lambda s: (s['tp']) / (s['tp'] + s['fn']), axis=1)
-
-        return cm
+        cm2 = dict()
+        for key in cm.keys():
+            cm2[key] = "%0.3f" % cm[key].mean()
+        return cm2
 
     def update_info(self, df: pd.DataFrame, df2: pd.DataFrame):
         info = dict()
@@ -132,9 +142,9 @@ class Aggragator:
 
     def __normalize(self, series: pd.Series):
         scaler = QuantileTransformer()
-        values = np.nan_to_num(series.values)
-        scaler.fit(values.reshape(-1, 1))
-        series = series.apply(np.nan_to_num).applymap(lambda x: scaler.transform(x)[0][0])
+        series = series.fillna(0)
+        scaler.fit(series.valuess.reshape(-1, 1))
+        series = series.applymap(lambda x: scaler.transform(x)[0][0])
         return series
 
     def __expand_dataframes(self, df2, ranking_attribute: str):

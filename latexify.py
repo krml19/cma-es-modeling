@@ -5,6 +5,7 @@ from file_helper import write_tex_table
 import sys
 import numpy as np
 from logger import Logger
+import scipy.stats as stats
 
 log = Logger(name='latex')
 
@@ -95,7 +96,7 @@ class Formatter:
 
     @staticmethod
     def format_rank(series: pd.Series):
-        return bold(series.name) + sep + reduce(lambda x, y: str(x) + sep + str(y), series.apply(lambda x: "%0.2f" % x))
+        return bold(series.name) + sep + reduce(lambda x, y: str(x) + sep + str(y), series.apply(lambda x: "%0.3f" % x if np.isfinite(x) else "---"))
 
     @staticmethod
     def format_model_name(name):
@@ -163,7 +164,8 @@ class DataTable:
 
 class DataPivotTable(DataTable):
     def __init__(self, data: pd.DataFrame, top_header_name: str, attribute: str, attribute_values: list,
-                 pivot: bool = True, header_formatter=Formatter.format_header, row_formatter=Formatter.first_row_formatter):
+                 pivot: bool = True, header_formatter=Formatter.format_header,
+                 row_formatter=Formatter.first_row_formatter):
         super().__init__(data=data, top_header_name=top_header_name, attribute=attribute,
                          attribute_values=attribute_values)
         self.data: pd.DataFrame = self.data.T
@@ -184,11 +186,19 @@ class DataPivotTable(DataTable):
     def rank(self, data: pd.DataFrame):
         return pd.Series(data=data.loc['rank'].mean(axis=1), name='rank')
 
+    def pvalue(self, data: pd.DataFrame, rank_mean: pd.Series):
+        min_rank = rank_mean.argmin()
+
+        return pd.Series(name='pvalue',
+                         data=data.loc['rank'].apply(
+                             lambda s: stats.wilcoxon(x=s, y=data.loc[('rank', min_rank)]).pvalue, axis=1))
+
     def build(self) -> str:
         header = self.formatters['header'](self.attribute_values, self.title)
         reducer = lambda x, y: str(x) + row_end + eol + str(y)
-        rank = Formatter.format_rank(self.rank(self.data))
-
+        rank = self.rank(self.data)
+        formatted_rank = Formatter.format_rank(rank)
+        pvalue = Formatter.format_rank(self.pvalue(self.data, rank))
         body = self.data.apply(self.format_series)
         body = body.T if self.pivot else body
         body = body.apply(self.format_row, axis=1)
@@ -202,8 +212,10 @@ class DataPivotTable(DataTable):
                '{body} \\\\ \n' \
                '\\midrule \n' \
                '{rank} \\\\ \n' \
+               '\\midrule \n' \
+               '{pvalue} \\\\ \n' \
                '\\bottomrule \n'.format(count=self.cols + 1, alignment='c', name=self.top_header_name,
-                                       header=header, body=body, rank=rank)
+                                        header=header, body=body, rank=formatted_rank, pvalue=pvalue)
 
 
 class InfoTable:
@@ -409,6 +421,7 @@ def save(experiment: Experiment, aggregator: Aggragator, data_frame: pd.DataFram
     tabular.comment = CommentBlock(aggregator.info)
 
     log.info("Writing: %s" % experiment)
+
     if len(sys.argv) > 1:
         write_tex_table(filename=filename, data=tabular.build(), path=sys.argv[1])
     log.info("Finished: %s" % experiment)
@@ -428,7 +441,14 @@ if __name__ == '__main__':
     experiment6 = Experiment(index=6, attribute='train_sample', header=bold('|X|'),
                              table=DataPivotTable, split=None)
 
-    # for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
-    for experiment in [experiment6]:
-    # for experiment in [experiment1]:
+    for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
+        # for experiment in [experiment6]:
+        # for experiment in [experiment1]:
         table(experiment=experiment)
+        pass
+
+    aggregator = Aggragator('best')
+    confusion_matrix = InfoTable(aggregator.confusion_matrix())
+    cm_tabular = Tabular()
+    cm_tabular.body = confusion_matrix
+    write_tex_table(filename="cm", data=cm_tabular.build(), path=sys.argv[1])
