@@ -209,7 +209,7 @@ class DataPivotTable(DataTable):
 
         body = self.data.apply(self.format_series, axis=1)
         body = body if self.pivot else body.T
-        body = body.unstack(level=0).apply(self.format_row, axis=1)
+        body = body.T.stack().swaplevel().unstack().apply(self.format_row, axis=1)
         body = reduce(reducer, body.values)
         groups = ['\\multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=int(self.cols / len(self.measures)),
                                                                              alignment='c', name=math(name))
@@ -459,9 +459,9 @@ if __name__ == '__main__':
     experiment6 = Experiment(index=6, attribute='train_sample', header=bold('|X|'),
                              table=DataPivotTable, split=None)
 
-    # for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
+    for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
         # for experiment in [experiment6]:
-    for experiment in [experiment1]:
+    # for experiment in [experiment1]:
         table(experiment=experiment)
         pass
 
