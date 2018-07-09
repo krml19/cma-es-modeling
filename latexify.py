@@ -1,6 +1,6 @@
 import pandas as pd
 from functools import reduce
-from aggregations import Aggragator
+from aggregations import Aggragator, Measure, MeasureF, MeasureF1
 from file_helper import write_tex_table
 import sys
 import numpy as np
@@ -14,6 +14,10 @@ line_end = '\\\\'
 row_end = line_end
 sep = ' & '
 pm = '\\,$\\pm$\\,'
+
+def identify(x):
+    print(x)
+    return x
 
 
 def mappings(value):
@@ -168,10 +172,12 @@ class DataPivotTable(DataTable):
                  row_formatter=Formatter.first_row_formatter):
         super().__init__(data=data, top_header_name=top_header_name, attribute=attribute,
                          attribute_values=attribute_values)
-        self.data: pd.DataFrame = self.data.T
+
         self.pivot = pivot
         self.formatters = {'header': header_formatter,
                            'first_row': row_formatter}
+        self.measures = data.index.levels[0]
+        self.cols = len(self.measures) * self.cols
 
     def format_series(self, series):
         col_formatter = lambda s, attribute: Formatter.format_cell(s[('rank_norm', attribute)],
@@ -183,30 +189,41 @@ class DataPivotTable(DataTable):
     def format_row(self, series: pd.Series):
         return self.formatters['first_row'](series.name) + sep + reduce(lambda x, y: x + sep + y, series)
 
-    def rank(self, data: pd.DataFrame):
-        return pd.Series(data=data.loc['rank'].mean(axis=1), name='rank')
+    def rank(self):
+        return pd.Series(data=self.data['rank'].mean(level=0).stack(), name='rank')
 
-    def pvalue(self, data: pd.DataFrame, rank_mean: pd.Series):
-        min_rank = rank_mean.argmin()
+    def pvalue(self):
+        df = pd.DataFrame()
+        for measure in self.measures:
+            df[measure] = self.stats(self.data['rank'].unstack(level=1).loc[measure].unstack())
+        return pd.Series(data=df.unstack(), name='pvalue')
 
-        return pd.Series(name='pvalue',
-                         data=data.loc['rank'].apply(
-                             lambda s: stats.wilcoxon(x=s, y=data.loc[('rank', min_rank)]).pvalue, axis=1))
+    def stats(self, df: pd.DataFrame):
+        argmin = df.mean(axis=1).argmin()
+        df2 = df.apply(lambda s: stats.wilcoxon(x=s, y=df.loc[argmin]).pvalue, axis=1)
+        return df2
 
     def build(self) -> str:
-        header = self.formatters['header'](self.attribute_values, self.title)
+        header = self.formatters['header'](self.attribute_values * len(self.measures), self.title)
         reducer = lambda x, y: str(x) + row_end + eol + str(y)
-        rank = self.rank(self.data)
-        formatted_rank = Formatter.format_rank(rank)
-        pvalue = Formatter.format_rank(self.pvalue(self.data, rank))
-        body = self.data.apply(self.format_series)
-        body = body.T if self.pivot else body
-        body = body.apply(self.format_row, axis=1)
+
+        body = self.data.apply(self.format_series, axis=1)
+        body = body if self.pivot else body.T
+        body = body.unstack(level=0).apply(self.format_row, axis=1)
         body = reduce(reducer, body.values)
+        groups = ['\\multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=int(self.cols / len(self.measures)),
+                                                                             alignment='c', name=math(name))
+                  for name in self.measures]
+        groups = sep + reduce(lambda x, y: x + sep + y, groups)
+        rank = self.rank()
+        formatted_rank = Formatter.format_rank(rank)
+        pvalue = Formatter.format_rank(self.pvalue())
 
         return '\\toprule \n' \
                '\\multicolumn{{{count}}}{{{alignment}}}{{{name}}} \\\\ \n' \
                '\\midrule \n' \
+               '{groups} \\\\ \n' \
+               '\\cmidrule{{{groups_range}}} \n' \
                '{header} \\\\ \n' \
                '\\midrule \n' \
                '{body} \\\\ \n' \
@@ -214,8 +231,9 @@ class DataPivotTable(DataTable):
                '{rank} \\\\ \n' \
                '\\midrule \n' \
                '{pvalue} \\\\ \n' \
-               '\\bottomrule \n'.format(count=self.cols + 1, alignment='c', name=self.top_header_name,
-                                        header=header, body=body, rank=formatted_rank, pvalue=pvalue)
+               '\\bottomrule \n'.format(count=self.cols + 1, alignment='c', name=self.top_header_name, groups=groups,
+                                        header=header, body=body, rank=formatted_rank, pvalue=pvalue, groups_range=
+                                        "2-%d" % (self.cols + 1))
 
 
 class InfoTable:
@@ -441,14 +459,14 @@ if __name__ == '__main__':
     experiment6 = Experiment(index=6, attribute='train_sample', header=bold('|X|'),
                              table=DataPivotTable, split=None)
 
-    for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
+    # for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
         # for experiment in [experiment6]:
-        # for experiment in [experiment1]:
+    for experiment in [experiment1]:
         table(experiment=experiment)
         pass
 
-    aggregator = Aggragator('best')
-    confusion_matrix = InfoTable(aggregator.confusion_matrix())
-    cm_tabular = Tabular()
-    cm_tabular.body = confusion_matrix
-    write_tex_table(filename="cm", data=cm_tabular.build(), path=sys.argv[1])
+    # aggregator = Aggragator('best')
+    # confusion_matrix = InfoTable(aggregator.confusion_matrix())
+    # cm_tabular = Tabular()
+    # cm_tabular.body = confusion_matrix
+    # write_tex_table(filename="cm", data=cm_tabular.build(), path=sys.argv[1])

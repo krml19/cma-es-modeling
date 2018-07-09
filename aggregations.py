@@ -31,7 +31,7 @@ class MeasureF(Measure):
 class MeasureF1(Measure):
     grouping_attribute = 'f1_mean'
     sem = 'f1_sem'
-    name = 'f1'
+    name = 'F_1'
 
 
 class Aggragator:
