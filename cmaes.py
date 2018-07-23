@@ -27,7 +27,7 @@ class CMAESAlgorithm:
     def __init__(self, constraints_generator: str, sigma0: float,
                  scaler: bool, model_name: str, k: int, n: int, margin: float,
                  x0: np.ndarray = None, benchmark_mode: bool = False, clustering_k_min: int=0, seed: int = 404,
-                 db: str = 'experiments', draw: bool = False, max_iter: int = int(5e2), train_sample: int = 500):
+                 db: str = 'experiments', draw: bool = False, max_iter: int = int(1e2), train_sample: int = 500):
         data_model = DataModel(name=model_name, k=k, n=n, seed=seed, train_sample=train_sample)
 
         self.__n_constraints = cg.generate(constraints_generator, n)
@@ -158,7 +158,7 @@ class CMAESAlgorithm:
         if self.draw:
             self.__draw_results(x0)
         res = cma.fmin(self.__objective_function, x0=x0, sigma0=self.__sigma0,
-                       options={'seed': self.__seed, 'maxiter': self.max_iter, 'tolfun': 1e-1, 'timeout': 60 * 60}, restart_from_best=True, eval_initial_x=True)
+                       options={'seed': self.__seed, 'maxiter': self.max_iter, 'tolfun': 1e-1, 'timeout': 60 * 30}, restart_from_best=True, eval_initial_x=True)
         if self.draw:
             self.__draw_results(res[0])
 

@@ -9,25 +9,30 @@ from matplotlib2tikz import get_tikz_code
 
 class Probabilities:
 
-    def transform(self):
+    def transform(self, path='.'):
         x = np.arange(1, 10)
         data = [math.pow(0.5, n) for n in x]
 
         df = pd.DataFrame(data=data, columns=['$Objętość\, obszaru\, dopuszczalnego$'])
         df.set_index(x, inplace=True)
 
-        ax = df.plot(logy=True, figsize=(8, 4))
+        ax = df.plot.bar(logy=True, figsize=(8, 4))
 
         ax.set_xlabel('$n$')
         ax.set_ylabel('$V$')
-
-        tikz_save("pryn.tex")
+        ax.legend_.remove()
+        # tikz_save("%s/pryn.tex" % path)
         # print(get_tikz_code())
         # plt.show()
+        plt.savefig("%s/pryn.pdf" % path)
+
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) > 1:
+        p = Probabilities()
+        p.transform(sys.argv[1])
 
 
-p = Probabilities()
-p.transform()
 
 # import matplotlib.pyplot as plt
 # import numpy as np

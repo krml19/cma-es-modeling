@@ -15,6 +15,7 @@ row_end = line_end
 sep = ' & '
 pm = '\\,$\\pm$\\,'
 
+
 def identify(x):
     print(x)
     return x
@@ -59,7 +60,7 @@ def boldmath(value):
 
 
 def convert_attribute_value(value):
-    return boldmath(mappings(value))
+    return math(mappings(value))
 
 
 def bold(text):
@@ -91,7 +92,7 @@ class Formatter:
     @staticmethod
     def format_header(attribute_values, name):
         attributes = list(map(lambda x: convert_attribute_value(x), attribute_values))
-        header = bm(name) + sep + reduce(lambda x, y: x + sep + y, attributes)
+        header = math(name) + sep + reduce(lambda x, y: x + sep + y, attributes)
         return header
 
     @staticmethod
@@ -100,7 +101,8 @@ class Formatter:
 
     @staticmethod
     def format_rank(series: pd.Series):
-        return bold(series.name) + sep + reduce(lambda x, y: str(x) + sep + str(y), series.apply(lambda x: "%0.3f" % x if np.isfinite(x) else "---"))
+        return math(series.name) + sep + reduce(lambda x, y: str(x) + sep + str(y),
+                                                series.apply(lambda x: "%0.3f" % x if np.isfinite(x) else "---"))
 
     @staticmethod
     def format_model_name(name):
@@ -142,9 +144,9 @@ class DataTable:
                                                                               x) + row_end + eol
 
     def rank(self, data: pd.DataFrame):
-        result = '\\midrule\n' + bold("rank") + sep + reduce(lambda x, y: str(x) + sep + str(y),
-                                                             map(lambda x: "%0.2f" % x,
-                                                                 data['rank'].mean())) + row_end + eol
+        result = '\\midrule\n' + math("ranga") + sep + reduce(lambda x, y: str(x) + sep + str(y),
+                                                                map(lambda x: "%0.2f" % x,
+                                                                    data['rank'].mean())) + row_end + eol
         return result
 
     def build(self) -> str:
@@ -177,7 +179,7 @@ class DataPivotTable(DataTable):
         self.formatters = {'header': header_formatter,
                            'first_row': row_formatter}
         self.measures = data.index.levels[0]
-        self.cols = len(self.measures) * self.cols
+        self.total_cols = len(self.measures) * self.cols + 1
 
     def format_series(self, series):
         col_formatter = lambda s, attribute: Formatter.format_cell(s[('rank_norm', attribute)],
@@ -190,18 +192,28 @@ class DataPivotTable(DataTable):
         return self.formatters['first_row'](series.name) + sep + reduce(lambda x, y: x + sep + y, series)
 
     def rank(self):
-        return pd.Series(data=self.data['rank'].mean(level=0).stack(), name='rank')
+        return pd.Series(data=self.data['rank'].mean(level=0).stack(), name='ranga')
 
     def pvalue(self):
         df = pd.DataFrame()
         for measure in self.measures:
             df[measure] = self.stats(self.data['rank'].unstack(level=1).loc[measure].unstack())
-        return pd.Series(data=df.unstack(), name='pvalue')
+        return pd.Series(data=df.unstack(), name='p-wartość')
 
     def stats(self, df: pd.DataFrame):
         argmin = df.mean(axis=1).argmin()
         df2 = df.apply(lambda s: stats.wilcoxon(x=s, y=df.loc[argmin]).pvalue, axis=1)
         return df2
+
+    def gr_midrules(self, add_first_col=True):
+        grouped_midrules = ''
+        i = 2
+        for _ in self.measures:
+            template = '\\cmidrule(r{10pt}){%d-%d}' if i == 2 else '\\cmidrule{%d-%d}'
+            grouped_midrules = grouped_midrules + (
+                        template % (i - 1 if i == 2 and add_first_col else i, i + self.cols - 1))
+            i = i + self.cols
+        return grouped_midrules
 
     def build(self) -> str:
         header = self.formatters['header'](self.attribute_values * len(self.measures), self.title)
@@ -211,7 +223,7 @@ class DataPivotTable(DataTable):
         body = body if self.pivot else body.T
         body = body.T.stack().swaplevel().unstack().apply(self.format_row, axis=1)
         body = reduce(reducer, body.values)
-        groups = ['\\multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=int(self.cols / len(self.measures)),
+        groups = ['\\multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=self.cols,
                                                                              alignment='c', name=math(name))
                   for name in self.measures]
         groups = sep + reduce(lambda x, y: x + sep + y, groups)
@@ -219,21 +231,25 @@ class DataPivotTable(DataTable):
         formatted_rank = Formatter.format_rank(rank)
         pvalue = Formatter.format_rank(self.pvalue())
 
+        grouped_midrules = self.gr_midrules()
+        header_midrules = self.gr_midrules(add_first_col=False)
+
         return '\\toprule \n' \
                '\\multicolumn{{{count}}}{{{alignment}}}{{{name}}} \\\\ \n' \
                '\\midrule \n' \
                '{groups} \\\\ \n' \
-               '\\cmidrule{{{groups_range}}} \n' \
+               '{header_midrule} \n' \
                '{header} \\\\ \n' \
-               '\\midrule \n' \
+               '{grouped_midrule} \n' \
                '{body} \\\\ \n' \
-               '\\midrule \n' \
+               '{grouped_midrule} \n' \
                '{rank} \\\\ \n' \
-               '\\midrule \n' \
+               '{grouped_midrule} \n' \
                '{pvalue} \\\\ \n' \
-               '\\bottomrule \n'.format(count=self.cols + 1, alignment='c', name=self.top_header_name, groups=groups,
+               '\\bottomrule \n'.format(count=self.total_cols, alignment='c', name=self.top_header_name, groups=groups,
                                         header=header, body=body, rank=formatted_rank, pvalue=pvalue, groups_range=
-                                        "2-%d" % (self.cols + 1))
+                                        "2-%d" % self.total_cols, grouped_midrule=grouped_midrules,
+                                        header_midrule=header_midrules)
 
 
 class InfoTable:
@@ -263,25 +279,32 @@ class ConfusionMatrix:
     @property
     def header(self):
         attributes = list(map(lambda x: convert_attribute_value(x), self.cm.keys()))
-        return bold('') + sep + reduce(lambda x, y: x + sep + y, attributes)
+        return math('problem') + sep + reduce(lambda x, y: x + sep + y, attributes)
 
     @property
     def body(self):
         formatter = lambda x: "%0.3f" % x
-        map_series = lambda s: str(s.name) + sep + reduce(lambda xi, yi: xi + sep + yi, s) + row_end
+        map_series = lambda s: Formatter.format_model_name(s.name) + sep + reduce(lambda xi, yi: xi + sep + yi,
+                                                                                  s) + row_end
         reducer = lambda r1, r2: r1 + eol + r2
 
         body = self.cm.applymap(formatter)
         body = body.apply(map_series, axis=1)
         body = reduce(reducer, body)
+
         return body
 
     def build(self) -> str:
+        map_series = lambda s: str(s.name) + sep + reduce(lambda xi, yi: xi + sep + yi, s) + row_end
+        footer = pd.Series(data=self.cm.mean().apply(lambda x: "%0.3f" % x), name='średnia')
+        footer = map_series(footer)
         return '\\toprule\n' \
                '{header} \\\\\n' \
                '\\midrule\n' \
                '{body} \n' \
-               '\\bottomrule\n'.format(header=self.header, body=self.body)
+               '\\midrule\n' \
+               '{footer} \n' \
+               '\\bottomrule\n'.format(header=self.header, body=self.body, footer=footer)
 
 
 class Component:
@@ -315,6 +338,10 @@ class Comment(Component):
     _template = '% {0: <20}\n'
 
 
+class Attribute(Component):
+    _template = '{}\n'
+
+
 class Environment:
     def __init__(self):
         self._body: [str, type, dict] = ''
@@ -322,6 +349,7 @@ class Environment:
         self.comment: CommentBlock = None
         self.bracket_options: Brackets = Brackets()
         self.curly_options: Curly = Curly()
+        self.attribute: Attribute = Attribute()
 
     @property
     def body(self) -> [str, type]:
@@ -336,11 +364,14 @@ class Environment:
         curly_options = self.curly_options.build()
         body = self.body.build() if isinstance(self.body, Environment) else self.body
         comment = self.comment.build() if isinstance(self.comment, CommentBlock) else ''
+        attribute = self.attribute.build()
         return '{comment}\n' \
+               '{attribute}' \
                '\\begin{{{component}}}{curly}{brackets}\n' \
                '{body}\n' \
                '\\end{{{component}}}\n'.format(component=self.component_type, curly=curly_options,
-                                               brackets=bracket_options, body=body, comment=comment)
+                                               brackets=bracket_options, body=body, comment=comment,
+                                               attribute=attribute)
 
 
 class Centering(Environment):
@@ -371,7 +402,12 @@ class Tabular(Environment):
 
     @Environment.body.setter
     def body(self, value):
-        if isinstance(value, DataTable) or isinstance(value, ConfusionMatrix) or isinstance(value, DataPivotTable):
+        if isinstance(value, DataPivotTable):
+            cols = ['r' * value.cols for _ in range(len(value.measures))]
+            columns = 'l' + reduce(lambda x, y: x + "!{\color{white}\\vrule width 10pt}" + y, cols)
+            self.curly_options.value = columns
+            Environment.body.fset(self, value.build())
+        elif isinstance(value, DataTable) or isinstance(value, ConfusionMatrix):
             columns = 'l' + 'r' * value.cols
             self.curly_options.value = columns
             Environment.body.fset(self, value.build())
@@ -435,6 +471,7 @@ def save(experiment: Experiment, aggregator: Aggragator, data_frame: pd.DataFram
     data_table.title = title
 
     tabular = Tabular()
+    tabular.attribute = Attribute(value="\\setlength{\\tabcolsep}{2pt}")
     tabular.body = data_table
     tabular.comment = CommentBlock(aggregator.info)
 
@@ -446,27 +483,27 @@ def save(experiment: Experiment, aggregator: Aggragator, data_frame: pd.DataFram
 
 
 if __name__ == '__main__':
-    experiment1 = Experiment(index=1, attribute='standardized', header=bold('Standaryzacja'), table=DataPivotTable,
+    experiment1 = Experiment(index=1, attribute='standardized', header=math('s'), table=DataPivotTable,
                              split=None)
-    experiment2 = Experiment(index=2, attribute='constraints_generator', header=bold('Liczba ograniczeń'),
+    experiment2 = Experiment(index=2, attribute='constraints_generator', header=math('n_c'),
                              table=DataPivotTable, split=None)
-    experiment3 = Experiment(index=3, attribute='clustering', header=boldmath('k_{min}'),
+    experiment3 = Experiment(index=3, attribute='clustering', header=math('k_{min}'),
                              table=DataPivotTable, split=None)
-    experiment4 = Experiment(index=4, attribute='sigma', header=boldmath('\sigma'),
+    experiment4 = Experiment(index=4, attribute='sigma', header=math('\sigma_0'),
                              table=DataPivotTable, split=None)
-    experiment5 = Experiment(index=5, attribute='margin', header=bold('Margines'),
+    experiment5 = Experiment(index=5, attribute='margin', header=math('m'),
                              table=DataPivotTable, split=None)
-    experiment6 = Experiment(index=6, attribute='train_sample', header=bold('|X|'),
+    experiment6 = Experiment(index=6, attribute='train_sample', header=math('|X|'),
                              table=DataPivotTable, split=None)
 
     for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
         # for experiment in [experiment6]:
-    # for experiment in [experiment1]:
-        table(experiment=experiment)
+        # for experiment in [experiment1]:
+        # table(experiment=experiment)
         pass
 
-    # aggregator = Aggragator('best')
-    # confusion_matrix = InfoTable(aggregator.confusion_matrix())
-    # cm_tabular = Tabular()
-    # cm_tabular.body = confusion_matrix
-    # write_tex_table(filename="cm", data=cm_tabular.build(), path=sys.argv[1])
+    aggregator = Aggragator('best')
+    confusion_matrix = ConfusionMatrix(aggregator.confusion_matrix())
+    cm_tabular = Tabular()
+    cm_tabular.body = confusion_matrix
+    write_tex_table(filename="cm", data=cm_tabular.build(), path=sys.argv[1])

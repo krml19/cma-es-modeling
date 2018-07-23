@@ -1,6 +1,6 @@
 import pandas as pd
 import sqlite3
-from sklearn.preprocessing import QuantileTransformer
+from sklearn.preprocessing import QuantileTransformer, MinMaxScaler
 import scipy.stats as stats
 import runner
 import numpy as np
@@ -84,39 +84,41 @@ class Aggragator:
             return pd.concat(data_frames, keys=map(lambda measure: measure.name, self.measures))
 
     @staticmethod
-    def f1_score(df: pd.DataFrame) -> pd.Series:
+    def f1_score(df: [pd.DataFrame, pd.Series]) -> pd.Series:
         return 2 * df.tp / (2 * df.tp + df.fp + df.fn)
 
     @staticmethod
-    def mcc(df: pd.DataFrame) -> pd.Series:
-        return (df.tp * df.tn - df.fp * df.fn) / ((df.tp + df.fp) * (df.tp + df.fn) * (df.tn + df.fp) * (df.tn + df.fn)).apply(lambda x: math.sqrt(x))
+    def mcc(df: [pd.DataFrame, pd.Series]) -> pd.Series:
+        return (df.tp * df.tn - df.fp * df.fn) / ((df.tp + df.fp) * (df.tp + df.fn) * (df.tn + df.fp) * (df.tn + df.fn)).apply(lambda x: max(math.sqrt(x), 1))
 
     @staticmethod
-    def accuracy(df: pd.DataFrame) -> pd.Series:
+    def accuracy(df: [pd.DataFrame, pd.Series]) -> pd.Series:
         return (df.tp + df.tn) / (df.tp + df.tn + df.fp + df.fn)
 
     @staticmethod
-    def recall(df: pd.DataFrame) -> pd.Series:
+    def recall(df: [pd.DataFrame, pd.Series]) -> pd.Series:
         return df.tp / (df.tp + df.fn)
 
     @staticmethod
-    def precision(df: pd.DataFrame) -> pd.Series:
-        return df.tp / (df.tp + df.fp)
+    def precision(df: [pd.DataFrame, pd.Series]) -> pd.Series:
+        return df.tp / (df.tp + df.fp).apply(lambda x: max(x, 1))
 
     def confusion_matrix(self):
         df = self.db()
-        cm = pd.DataFrame()
+        grouping_attributes = ['name', 'k']
+        cm: pd.DataFrame = df.groupby(grouping_attributes).apply(self.cm_stats)
+        return cm
 
-        cm['ACC'] = self.accuracy(df)
-        cm['p'] = self.precision(df)
-        cm['r'] = self.recall(df)
-        cm['F_1'] = self.f1_score(df)
-        cm['MCC'] = self.mcc(df)
-
-        cm2 = dict()
-        for key in cm.keys():
-            cm2[key] = "%0.3f" % cm[key].mean()
-        return cm2
+    def cm_stats(self, group):
+        results = {
+            'ACC': self.accuracy(group).mean(),
+            'p': self.precision(group).mean(),
+            'r': self.recall(group).mean(),
+            'F_1': self.f1_score(group).mean(),
+            'MCC': self.mcc(group).mean(),
+            'f': group['f'].mean() * -1,
+        }
+        return pd.Series(results, name='metrics')
 
     def update_info(self, df: pd.DataFrame, df2: pd.DataFrame):
         info = dict()
@@ -168,8 +170,19 @@ class Aggragator:
         }
         return pd.Series(results, name='metrics')
 
-    def __normalize(self, series: pd.Series):
+    def normalize(self, series: pd.Series):
         scaler = QuantileTransformer()
+        series = series.fillna(0)
+        scaler.fit(series.values.reshape(-1, 1))
+        series = series.applymap(lambda x: scaler.transform(x)[0][0])
+        return series
+
+    def normalize_sem(self, series: pd.Series, measure: Measure):
+        if measure is MeasureF:
+            max = 1
+        else:
+            max  = 1
+        scaler = MinMaxScaler(feature_range=(0, max))
         series = series.fillna(0)
         scaler.fit(series.values.reshape(-1, 1))
         series = series.applymap(lambda x: scaler.transform(x)[0][0])
@@ -183,10 +196,10 @@ class Aggragator:
         data_frame[rank_keys] = data_frame[measure.grouping_attribute].rank(axis=1, ascending=False)
 
         rank_norm_keys = [('rank_norm', key) for key in self.attribute_values]
-        data_frame[rank_norm_keys] = self.__normalize(data_frame[measure.grouping_attribute])
+        data_frame[rank_norm_keys] = self.normalize(data_frame[measure.grouping_attribute])
 
         sem_norm_keys = [('sem_norm', key) for key in self.attribute_values]
-        data_frame[sem_norm_keys] = self.__normalize(data_frame[measure.sem])
+        data_frame[sem_norm_keys] = self.normalize_sem(data_frame[measure.sem], measure=measure)
 
         data_frame.rename(columns={
             measure.grouping_attribute: MeasureF.grouping_attribute,
