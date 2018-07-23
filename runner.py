@@ -71,7 +71,7 @@ class AlgorithmRunner:
             if exists == 0:
                 filtered.append(algorithm)
             else:
-                log.info("Experiment already exists: {}".format(algorithm))
+                # log.info("Experiment already exists: {}".format(algorithm))
                 existing = existing + 1
         log.info("Number of exisiting experiments: {}/{}".format(existing, len(experiments)))
         return filtered
