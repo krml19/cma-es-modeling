@@ -82,15 +82,20 @@ class Formatter:
 
     @staticmethod
     def format_error(x: float) -> str:
+        # x = min(x, 1.0) if x is float else 0.0
+        # x = max(x, np.nan)
         return '\\begin{tikzpicture}[y=0.75em,baseline=1pt]\\draw[very thick] (0,0) -- (0,%f);\\end{tikzpicture}' % x
 
     @staticmethod
     def format_cell(norm_rank: float, value: float, error: float) -> str:
+        error = error / value if value > 0 else 0
+        error = min(error, 1)
         return '\cellcolor[rgb]{%s} %0.2f %s ' % \
                (Formatter.format_color(norm_rank), value, Formatter.format_error(error))
 
     @staticmethod
     def format_header(attribute_values, name):
+        attribute_values = ["(1,1)", "(1,\infty)", "(2,\infty)"] * 2 if attribute_values == [0, 1, 2] * 2 else attribute_values
         attributes = list(map(lambda x: convert_attribute_value(x), attribute_values))
         header = math(name) + sep + reduce(lambda x, y: x + sep + y, attributes)
         return header
@@ -172,6 +177,7 @@ class DataPivotTable(DataTable):
     def __init__(self, data: pd.DataFrame, top_header_name: str, attribute: str, attribute_values: list,
                  pivot: bool = True, header_formatter=Formatter.format_header,
                  row_formatter=Formatter.first_row_formatter):
+        data.fillna(value=0, inplace=True)
         super().__init__(data=data, top_header_name=top_header_name, attribute=attribute,
                          attribute_values=attribute_values)
 
@@ -283,9 +289,8 @@ class ConfusionMatrix:
 
     @property
     def body(self):
-        formatter = lambda x: "%0.3f" % x
-        map_series = lambda s: Formatter.format_model_name(s.name) + sep + reduce(lambda xi, yi: xi + sep + yi,
-                                                                                  s) + row_end
+        formatter = lambda x: "%0.3f %s" % (x[0], Formatter.format_error(x[1]))
+        map_series = lambda s: Formatter.format_model_name(s.name) + sep + reduce(lambda xi, yi: xi + sep + yi, s) + row_end
         reducer = lambda r1, r2: r1 + eol + r2
 
         body = self.cm.applymap(formatter)
@@ -296,7 +301,7 @@ class ConfusionMatrix:
 
     def build(self) -> str:
         map_series = lambda s: str(s.name) + sep + reduce(lambda xi, yi: xi + sep + yi, s) + row_end
-        footer = pd.Series(data=self.cm.mean().apply(lambda x: "%0.3f" % x), name='średnia')
+        footer = pd.Series(data=self.cm.applymap(lambda x: x[0]).mean().apply(lambda x: "%0.3f" % x), name='średnia')
         footer = map_series(footer)
         return '\\toprule\n' \
                '{header} \\\\\n' \
@@ -426,11 +431,11 @@ class CommentBlock:
         self.body = body
 
     def build(self):
-        if isinstance(self.body, dict):
-            items: dict = self.body
-            mapped_items = list(
-                map(lambda item: Comment(value="%25s\t\t%s" % (item[0], item[1])).build(), items.items()))
-            return reduce(lambda x, y: x + y, mapped_items)
+        # if isinstance(self.body, dict):
+        #     items: dict = self.body
+        #     mapped_items = list(
+        #         map(lambda item: Comment(value="%25s\t\t%s" % (item[0], item[1])).build(), items.items()))
+        #     return reduce(lambda x, y: x + y, mapped_items)
         return ''
 
 
@@ -487,7 +492,7 @@ if __name__ == '__main__':
                              split=None)
     experiment2 = Experiment(index=2, attribute='constraints_generator', header=math('n_c'),
                              table=DataPivotTable, split=None)
-    experiment3 = Experiment(index=3, attribute='clustering', header=math('k_{min}'),
+    experiment3 = Experiment(index=3, attribute='clustering', header=math('(k_{min}, k_{max})'),
                              table=DataPivotTable, split=None)
     experiment4 = Experiment(index=4, attribute='sigma', header=math('\sigma_0'),
                              table=DataPivotTable, split=None)
@@ -497,10 +502,10 @@ if __name__ == '__main__':
                              table=DataPivotTable, split=None)
 
     for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
-        # for experiment in [experiment6]:
-        # for experiment in [experiment1]:
-        # table(experiment=experiment)
-        pass
+    # for experiment in [experiment3]:
+    # for experiment in [experiment1]:
+        table(experiment=experiment)
+        # pass
 
     aggregator = Aggragator('best')
     confusion_matrix = ConfusionMatrix(aggregator.confusion_matrix())

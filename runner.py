@@ -90,13 +90,13 @@ class AlgorithmRunner:
 
     def data_source(self, constraints_generator: callable = cg.f_n3, sigma0: float = 0.5,
                     margin: float = 1.0, scaler: bool = True, clustering_k_min: int = 2, benchmark_mode: bool = False,
-                    seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), train_sample: int = 500):
+                    seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), train_sample: int = 500, models: list = ['ball', 'simplex', 'cube']):
 
         experiments = []
         for seed in seeds:
             for k in K:
                 for n in N:
-                    for model in ['ball', 'simplex', 'cube']:
+                    for model in models:
                         inopts = frozendict({
                             'constraints_generator': constraints_generator.__name__,
                             'sigma0': sigma0,
@@ -114,26 +114,26 @@ class AlgorithmRunner:
                         experiments.append(inopts)
         return experiments
 
-    def experiments_1(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
+    def experiments_1(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), models: list = ['ball', 'simplex', 'cube']) -> list:
         return [self.data_source(scaler=scaler, seeds=seeds, K=K, N=N, constraints_generator=cg.f_2np2,
-                                 clustering_k_min=0, sigma0=1.0, margin=1.0) for scaler in [True, False]]
+                                 clustering_k_min=0, sigma0=1.0, margin=1.0, models=models) for scaler in [True, False]]
 
-    def experiments_2(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
+    def experiments_2(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), models: list = ['ball', 'simplex', 'cube']) -> list:
         return [self.data_source(constraints_generator=constraints_generator, seeds=seeds, K=K, N=N, clustering_k_min=0,
-                                 sigma0=1.0, margin=1.0) for constraints_generator in [cg.f_2n, cg.f_2np2, cg.f_n3, cg.f_2pn]]
+                                 sigma0=1.0, margin=1.0, models=models) for constraints_generator in [cg.f_2n, cg.f_2np2, cg.f_n3, cg.f_2pn]]
 
-    def experiments_3(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
-        return [self.data_source(clustering_k_min=kmin, seeds=seeds, K=K, N=N, sigma0=1.0, margin=1.0) for kmin in [0, 1, 2]]
+    def experiments_3(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), models: list = ['ball', 'simplex', 'cube']) -> list:
+        return [self.data_source(clustering_k_min=kmin, seeds=seeds, K=K, N=N, sigma0=1.0, margin=1.0, models=models) for kmin in [0, 1, 2]]
 
-    def experiments_4(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
-        return [self.data_source(sigma0=sigma, seeds=seeds, K=K, N=N, margin=1.0) for sigma in [0.125, 0.25, 0.5, 1, 2]]
+    def experiments_4(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), models: list = ['ball', 'simplex', 'cube']) -> list:
+        return [self.data_source(sigma0=sigma, seeds=seeds, K=K, N=N, margin=1.0, models=models) for sigma in [0.125, 0.25, 0.5, 1, 2]]
 
-    def experiments_5(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8)) -> list:
-        return [self.data_source(margin=margin, seeds=seeds, K=K, N=N) for margin in [0.9, 1, 1.1]]
+    def experiments_5(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), models: list = ['ball', 'simplex', 'cube']) -> list:
+        return [self.data_source(margin=margin, seeds=seeds, K=K, N=N, models=models) for margin in [0.9, 1, 1.1]]
 
-    def experiments_6(self, seeds: range = range(0, 30), N: range = range(2, 8)) -> list:
+    def experiments_6(self, seeds: range = range(0, 30), N: range = range(2, 8), K: range=range(1, 3), models: list = ['ball', 'simplex', 'cube']) -> list:
         return [
-            self.data_source(seeds=seeds, K=range(1, 3), N=N, train_sample=ts) for ts in [100, 200, 300, 400, 500]]
+            self.data_source(seeds=seeds, N=N, train_sample=ts, models=models, K=K) for ts in [100, 200, 300, 400, 500]]
 
     def benchmarks(self) -> list:
         return [self.data_source(benchmark_mode=True)]
@@ -196,15 +196,15 @@ class AlgorithmRunner:
 
 if __name__ == '__main__':
     runner = AlgorithmRunner()
-    seeds = range(0, 10)
+    seeds = range(0, 5)
     experiments = flat([
-        runner.experiments_1(seeds=seeds),
-        runner.experiments_2(seeds=seeds),
-        runner.experiments_3(seeds=seeds),
-        runner.experiments_4(seeds=seeds),
-        runner.experiments_5(seeds=seeds),
-        runner.experiments_6(seeds=seeds)
+        runner.experiments_1(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
+        runner.experiments_2(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
+        runner.experiments_3(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
+        runner.experiments_4(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
+        runner.experiments_5(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
+        runner.experiments_6(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex'])
         ])
     # experiments = runner.experiments_1(seeds=seeds)
-    # runner.run(experiments)
-    runner.run_slurm(experiments)
+    runner.run(experiments)
+    # runner.run_slurm(experiments)

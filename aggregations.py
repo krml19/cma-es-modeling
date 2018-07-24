@@ -107,17 +107,31 @@ class Aggragator:
         df = self.db()
         grouping_attributes = ['name', 'k']
         cm: pd.DataFrame = df.groupby(grouping_attributes).apply(self.cm_stats)
+        cm = cm.apply(self.map_series)
         return cm
 
+    def map_series(self, series: pd.Series) -> pd.Series:
+        print(series)
+        m = series.apply(lambda x: x[1]).max()
+        return series.apply(lambda x: (x[0], x[1] / m))
+
+    @staticmethod
+    def objective_function(df: [pd.DataFrame, pd.Series]) -> pd.Series:
+        return df.f * -1
+
     def cm_stats(self, group):
+        func = lambda x: (x(group).mean(), x(group).sem(ddof=1) * stats.t.interval(alpha=0.95, df=group.shape[0])[1])
+        f1 = func(self.objective_function)
         results = {
-            'ACC': self.accuracy(group).mean(),
-            'p': self.precision(group).mean(),
-            'r': self.recall(group).mean(),
-            'F_1': self.f1_score(group).mean(),
-            'MCC': self.mcc(group).mean(),
-            'f': group['f'].mean() * -1,
+            'ACC': func(self.accuracy),
+            'p': func(self.precision),
+            'r': func(self.recall),
+            'F_1': func(self.f1_score),
+            'MCC': func(self.mcc),
+            'f': func(self.objective_function)
+            # 'f': (f1[0], f1[1]) # / f1[0]),
         }
+
         return pd.Series(results, name='metrics')
 
     def update_info(self, df: pd.DataFrame, df2: pd.DataFrame):
@@ -149,8 +163,8 @@ class Aggragator:
         results = {
             'f_mean': (group['f'].mean() * -1),
             'f1_mean': (group['f1'].mean()),
-            'f_sem': group['f'].sem(ddof=1) * stats.norm.ppf(q=0.975),
-            'f1_sem': group['f1'].sem(ddof=1) * stats.norm.ppf(q=0.975),
+            'f_sem': (group['f'].sem(ddof=1) * stats.t.interval(alpha=0.95, df=group.shape[0])[1]), # / (group['f'].mean() * -1),
+            'f1_sem': (group['f1'].sem(ddof=1) * stats.t.interval(alpha=0.95, df=group.shape[0])[1]),
             'tp_mean': group['tp'].mean(),
             'tn_mean': group['tn'].mean(),
             'fp_mean': group['fp'].mean(),
@@ -178,14 +192,14 @@ class Aggragator:
         return series
 
     def normalize_sem(self, series: pd.Series, measure: Measure):
-        if measure is MeasureF:
-            max = 1
-        else:
-            max  = 1
-        scaler = MinMaxScaler(feature_range=(0, max))
+        # if measure is MeasureF:
+        #     max = 1
+        # else:
+        #     max  = 1
+        # scaler = MinMaxScaler(feature_range=(0, max))
         series = series.fillna(0)
-        scaler.fit(series.values.reshape(-1, 1))
-        series = series.applymap(lambda x: scaler.transform(x)[0][0])
+        # scaler.fit(series.values.reshape(-1, 1))
+        # series = series.applymap(lambda x: scaler.transform(x)[0][0])
         return series
 
     def select_features(self, df2, ranking_attribute: str, measure: Measure = MeasureF):

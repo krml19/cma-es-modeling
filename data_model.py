@@ -46,12 +46,15 @@ class DataModel:
         return self.__get_dataset(self.__filename(Paths.train.value), nrows=self.train_sample)
 
     def dataset(self, seed):
-        while True:
-            test = sample.dataset(int(1e6), n=self.n, k=self.k, seed=seed, p=self.problem, classes=[0, 1])
-            _sum = test[:, -1].sum().astype(int)
-            if _sum > 3:
-                return test
-            seed = seed + 1
+        # while True:
+        #     test = sample.dataset(int(1e6), n=self.n, k=self.k, seed=seed, p=self.problem, classes=[0, 1])
+        #     _sum = test[:, -1].sum().astype(int)
+        #     if _sum > 3:
+        #         return test
+        #     seed = seed + 1
+
+        test = sample.dataset(int(1e6), n=self.n, k=self.k, seed=seed, p=self.problem, classes=[0, 1])
+        return test
 
     def test_set(self) -> tuple:
         test = self.dataset(seed=self.seed + 100)
