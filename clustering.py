@@ -6,13 +6,6 @@ import numpy as np
 from logger import Logger
 from sklearn.cluster import KMeans
 
-'''
-Example usage
-data: np.ndarray = pd.read_csv('data/train/simplex3_0.csv', nrows=int(1e3)).values
-clusters = xmeans_clustering(data=data)
-'''
-
-
 def xmeans_clustering(data: np.ndarray, kmin: [int, None] = 1, kmax: [int, None] = 20, tolerance: float = 0.025,
                       criterion: enumerate = splitting_type.BAYESIAN_INFORMATION_CRITERION, ccore: bool = True,
                       logger=Logger(name='clustering'),

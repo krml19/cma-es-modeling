@@ -1,11 +1,9 @@
 import cma
 import numpy as np
-import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from functools import reduce
 
 from data_model import DataModel
-import draw
 from experimentdatabase import Database
 from logger import Logger
 from sampler import bounding_sphere
@@ -27,7 +25,7 @@ class CMAESAlgorithm:
     def __init__(self, constraints_generator: str, sigma0: float,
                  scaler: bool, model_name: str, k: int, n: int, margin: float,
                  x0: np.ndarray = None, benchmark_mode: bool = False, clustering_k_min: int=0, seed: int = 404,
-                 db: str = 'experiments', draw: bool = False, max_iter: int = int(1e2), train_sample: int = 500):
+                 db: str = 'experiments', max_iter: int = int(5e2), train_sample: int = 500):
         data_model = DataModel(name=model_name, k=k, n=n, seed=seed, train_sample=train_sample)
 
         self.__n_constraints = cg.generate(constraints_generator, n)
@@ -51,7 +49,6 @@ class CMAESAlgorithm:
         self.__seed = seed
         self.db = db
         self.benchmark_mode = benchmark_mode
-        self.draw = draw
         self.time_delta = None
         self.current_cluster = None
         self.max_iter = max_iter
@@ -154,13 +151,8 @@ class CMAESAlgorithm:
             x0 = self.__x0
         log.debug("Expanding")
         x0 = self.__expand_initial_w(x0=x0)
-        f = self.__objective_function(np.array(x0))
-        if self.draw:
-            self.__draw_results(x0)
         res = cma.fmin(self.__objective_function, x0=x0, sigma0=self.__sigma0,
                        options={'seed': self.__seed, 'maxiter': self.max_iter, 'tolfun': 1e-1, 'timeout': 60 * 30}, restart_from_best=True, eval_initial_x=True)
-        if self.draw:
-            self.__draw_results(res[0])
 
         return res
 
@@ -171,31 +163,6 @@ class CMAESAlgorithm:
         if split_w:
             w = np.split(w, self.__n_constraints, axis=1)
         return np.concatenate(w).flatten(), np.concatenate(w0)
-
-    def __draw_results(self, w, title=None):
-        if self.valid_X.shape[1] > 4:
-            return
-
-        w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
-        w0 = w[-1:]
-        w = w[:-1]
-
-        names = ['x_{}'.format(x) for x in np.arange(self.valid_X.shape[1])]
-        data = self.valid_X if self.__scaler is None else self.__scaler.inverse_transform(self.valid_X)
-
-        valid = pd.DataFrame(data=data, columns=names)
-        valid['valid'] = pd.Series(data=self.matches_constraints(self.valid_X, w, w0), name='valid')
-
-        train = self.current_cluster if self.__scaler is None else self.__scaler.inverse_transform(self.current_cluster)
-        train = pd.DataFrame(data=train, columns=names)
-        train['valid'] = pd.Series(data=self.matches_constraints(self.current_cluster, w, w0), name='valid')
-        # train['valid'] = self.__test_Y
-        if valid.shape[1] == 3:
-            draw.draw2dmodel(df=valid, train=train, constraints=np.split(w, self.__n_constraints, axis=1), title=title, model=self.__data_model.benchmark_model.name)
-        elif valid.shape[1] == 4:
-            draw.draw3dmodel(df=valid, train=train, constraints=np.split(w, self.__n_constraints, axis=1), title=title, model=self.__data_model.benchmark_model.name)
-        else:
-            pass
 
     def experiment(self):
 
@@ -215,7 +182,6 @@ class CMAESAlgorithm:
             self.__results.append(cma_es)
             log.debug("Finished analyzing train dataset")
         self.time_delta = time.process_time() - start
-
 
         log.debug('Creating test X, Y')
         self.test_X, self.test_Y = self.__data_model.test_set()
@@ -293,9 +259,9 @@ class CMAESAlgorithm:
                  self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
 
 
-# algorithm = CMAESAlgorithm(constraints_generator=cg.f_2n.__name__, sigma0=2, k=1,
-#                            scaler=True, margin=1.1, clustering_k_min=2, model_name='simplex', n=5, seed=0, draw=False)
-# algorithm.experiment()
+algorithm = CMAESAlgorithm(constraints_generator=cg.f_2n.__name__, sigma0=2, k=1,
+                           scaler=True, margin=1.1, clustering_k_min=2, model_name='simplex', n=5, seed=0)
+algorithm.experiment()
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:

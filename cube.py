@@ -31,12 +31,6 @@ class Cube(BenchmarkModel):
 
     def constraints(self):
         for i, constraints in enumerate(self.constraint_sets, start=1):
-            print("k=%d" %i)
+            print("k=%d" % i)
             for constraint in constraints:
                 print(constraint)
-
-
-# cube = Cube(2)
-# cube.constraints()
-# print(cube.bounds)
-# print(str(cube.constraint_sets))

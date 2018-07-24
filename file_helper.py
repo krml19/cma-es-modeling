@@ -1,6 +1,5 @@
 import pandas as pd
 from os import makedirs
-# import pandas_profiling
 import os
 from enum import Enum
 
@@ -29,9 +28,3 @@ def __write_to_file(filename: str, df: pd.DataFrame):
 def write_data_frame(df: pd.DataFrame, path: str, filename: str, extension: str='.csv'):
     filename = concat_filename(path=path, filename=filename, extension=extension)
     __write_to_file(filename=filename, df=df)
-
-
-def write_tex_table(filename: str, data: str=None, extension: str='.tex', path: str=Paths.tables.value):
-    filename = path + filename + extension
-    with open(filename, "w") as file:
-        file.write(data)

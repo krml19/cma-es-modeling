@@ -16,38 +16,6 @@ def flat(l):
     return [item for sublist in l for item in sublist]
 
 
-class SlurmPool:
-    def __init__(self):
-        try:
-            os.makedirs("./scripts")
-        except:
-            None
-        self.run = open("./run.sh", "w")
-        self.run.write("#!/bin/bash\n")
-        self.run.write("export PATH=\"/home/inf116360/anaconda3/bin:$PATH\"\n")
-
-    def execute(self, cmd, arguments, script_filename):
-        sbatch = open("./scripts/%s.sh" % script_filename, "w")
-        sbatch.write("#!/bin/bash\n")
-        sbatch.write("#SBATCH -p idss-student")
-        sbatch.write("#SBATCH -c 1 --mem=1475\n")
-        sbatch.write("#SBATCH -t 24:00:00\n")
-        sbatch.write("#SBATCH -Q\n")
-        sbatch.write("date\n")
-        sbatch.write("hostname\n")
-        sbatch.write("echo %s %s\n" % (cmd, arguments))
-        sbatch.write("srun %s %s && srun rm \"./scripts/%s.sh\"\n" % (cmd, arguments, script_filename))
-        sbatch.close()
-
-        self.run.write("sbatch \"./scripts/%s.sh\"\n" % script_filename)
-
-    def close(self):
-        self.run.close()
-
-        ps = subprocess.Popen(["/bin/sh", "./run.sh"])
-        ps.wait()
-
-
 class AlgorithmRunner:
 
     @property
@@ -175,24 +143,6 @@ class AlgorithmRunner:
         pool = Pool(processes=cpus)  # start worker processes
         pool.map(self.run_instance, experiments)
 
-    def run_slurm(self, experiments: list):
-        experiments = set(flat(experiments))
-        db = 'experiments.sqlite'
-        database = Database(database_filename=db)
-        experiments = self.filter_algorithms(experiments, database=database)
-
-        pool = SlurmPool()
-        for experiment in experiments:
-            try:
-                mapped = list(map(lambda item: item[0] + ':' + str(item[1]), experiment.items()))
-                arguments = "\"" + reduce(lambda key, value: key + ';' + value, mapped) + "\""
-                pool.execute(cmd='python', arguments='cmaes.py {}'.format(arguments),
-                             script_filename=str(self.convert_to_sql_params(experiment)))
-            except:
-                print(experiment)
-
-        pool.close()
-
 
 if __name__ == '__main__':
     runner = AlgorithmRunner()
@@ -207,4 +157,3 @@ if __name__ == '__main__':
         ])
     # experiments = runner.experiments_1(seeds=seeds)
     runner.run(experiments)
-    # runner.run_slurm(experiments)
