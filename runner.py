@@ -3,9 +3,6 @@ from multiprocessing import Pool
 from experimentdatabase import Database
 from logger import Logger
 import constraints_generator as cg
-import os
-import subprocess
-from functools import reduce
 from frozendict import frozendict
 import psutil
 
@@ -39,7 +36,6 @@ class AlgorithmRunner:
             if exists == 0:
                 filtered.append(algorithm)
             else:
-                # log.info("Experiment already exists: {}".format(algorithm))
                 existing = existing + 1
         log.info("Number of exisiting experiments: {}/{}".format(existing, len(experiments)))
         return filtered
@@ -146,14 +142,13 @@ class AlgorithmRunner:
 
 if __name__ == '__main__':
     runner = AlgorithmRunner()
-    seeds = range(0, 5)
+    seeds = range(0, 30)
     experiments = flat([
-        runner.experiments_1(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
-        runner.experiments_2(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
-        runner.experiments_3(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
-        runner.experiments_4(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
-        runner.experiments_5(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
-        runner.experiments_6(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex'])
+        runner.experiments_1(seeds=seeds),
+        runner.experiments_2(seeds=seeds),
+        runner.experiments_3(seeds=seeds),
+        runner.experiments_4(seeds=seeds),
+        runner.experiments_5(seeds=seeds),
+        runner.experiments_6(seeds=seeds)
         ])
-    # experiments = runner.experiments_1(seeds=seeds)
     runner.run(experiments)

@@ -1,7 +1,6 @@
 import numpy as np
 import itertools
 import random
-import math
 
 
 def samples(bounds: list, rows: int, seed: [int, None] = None):

@@ -6,6 +6,7 @@ from constraint import Constraints, Constraint, Operator
 from file_helper import Paths
 from logger import Logger
 
+
 class BenchmarkModel:
 
     def __init__(self, n, d=2.7, L=1e10, name='base-model', B=list([1, 1])):

@@ -152,7 +152,7 @@ class CMAESAlgorithm:
         log.debug("Expanding")
         x0 = self.__expand_initial_w(x0=x0)
         res = cma.fmin(self.__objective_function, x0=x0, sigma0=self.__sigma0,
-                       options={'seed': self.__seed, 'maxiter': self.max_iter, 'tolfun': 1e-1, 'timeout': 60 * 30}, restart_from_best=True, eval_initial_x=True)
+                       options={'seed': self.__seed, 'maxiter': self.max_iter, 'tolfun': 1e-1, 'timeout': 60 * 60}, restart_from_best=True, eval_initial_x=True)
 
         return res
 
@@ -259,9 +259,9 @@ class CMAESAlgorithm:
                  self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
 
 
-algorithm = CMAESAlgorithm(constraints_generator=cg.f_2pn.__name__, sigma0=0.125, k=1,
-                           scaler=True, margin=1.0, clustering_k_min=0, model_name='simplex', n=2, seed=0)
-algorithm.experiment()
+# algorithm = CMAESAlgorithm(constraints_generator=cg.f_2pn.__name__, sigma0=0.125, k=1,
+#                            scaler=True, margin=1.0, clustering_k_min=0, model_name='simplex', n=2, seed=0)
+# algorithm.experiment()
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
