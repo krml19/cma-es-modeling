@@ -1,4 +1,4 @@
-from cmaes import CMAESAlgorithm
+from cmaesoccs import CMAESAlgorithm
 from multiprocessing import Pool
 from experimentdatabase import Database
 from logger import Logger
