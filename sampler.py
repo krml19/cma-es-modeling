@@ -4,8 +4,9 @@ import random
 import math
 
 
-def samples(bounds: list, rows: int, seed: int):
-    np.random.seed(seed=seed)
+def samples(bounds: list, rows: int, seed: [int, None] = None):
+    if seed is not None:
+        np.random.seed(seed=seed)
     return np.vstack(
         [np.random.uniform(low=low, high=high, size=rows) for low, high in bounds]).T
 

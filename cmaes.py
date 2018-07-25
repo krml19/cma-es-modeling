@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from functools import reduce
 
-from data_model import DataModel
+from models import DataModel
 from experimentdatabase import Database
 from logger import Logger
 from sampler import bounding_sphere
@@ -255,12 +255,12 @@ class CMAESAlgorithm:
     @property
     def sql_params(self):
         return (self.__constraints_generator, self.__n_constraints, self.__margin, self.__sigma0, self.__data_model.benchmark_model.k,
-                 self.__data_model.benchmark_model.i, self.__seed,
+                 self.__data_model.benchmark_model.n, self.__seed,
                  self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
 
 
-algorithm = CMAESAlgorithm(constraints_generator=cg.f_2n.__name__, sigma0=2, k=1,
-                           scaler=True, margin=1.1, clustering_k_min=2, model_name='simplex', n=5, seed=0)
+algorithm = CMAESAlgorithm(constraints_generator=cg.f_2pn.__name__, sigma0=0.125, k=1,
+                           scaler=True, margin=1.0, clustering_k_min=0, model_name='simplex', n=2, seed=0)
 algorithm.experiment()
 
 if __name__ == '__main__':

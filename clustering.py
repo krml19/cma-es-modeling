@@ -6,10 +6,11 @@ import numpy as np
 from logger import Logger
 from sklearn.cluster import KMeans
 
+# Based on: https://github.com/annoviko/pyclustering/blob/master/pyclustering/cluster/examples/xmeans_examples.py
 def xmeans_clustering(data: np.ndarray, kmin: [int, None] = 1, kmax: [int, None] = 20, tolerance: float = 0.025,
                       criterion: enumerate = splitting_type.BAYESIAN_INFORMATION_CRITERION, ccore: bool = True,
                       logger=Logger(name='clustering'),
-                      visualize: bool = True) -> np.ndarray:
+                      visualize: bool = False) -> np.ndarray:
 
     # Initial centers - KMeans algorithm
     kmeans = KMeans(n_clusters=kmin)
