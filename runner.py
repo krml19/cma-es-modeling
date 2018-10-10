@@ -131,7 +131,7 @@ class AlgorithmRunner:
     def experiments_5(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), models: list = ['ball', 'simplex', 'cube']) -> list:
         return [self.data_source(margin=margin, seeds=seeds, K=K, N=N, models=models) for margin in [0.9, 1, 1.1]]
 
-    def experiments_6(self, seeds: range = range(0, 30), N: range = range(4, 5), K: range=range(1, 3), models: list = ['ball', 'simplex', 'cube']) -> list:
+    def experiments_6(self, seeds: range = range(0, 30), N: range = range(2, 8), K: range=range(1, 3), models: list = ['ball', 'simplex', 'cube']) -> list:
         return [
             self.data_source(seeds=seeds, N=N, train_sample=ts, models=models, K=K) for ts in [100, 200, 300, 400, 500]]
 

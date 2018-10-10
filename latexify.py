@@ -482,10 +482,9 @@ def save(experiment: Experiment, aggregator: Aggragator, data_frame: pd.DataFram
 
     log.info("Writing: %s" % experiment)
 
-    if len(sys.argv) > 1:
-        write_tex_table(filename=filename, data=tabular.build(), path=sys.argv[1])
-    log.info("Finished: %s" % experiment)
-
+    # if len(sys.argv) > 1:
+    log.debug("Finished: %s" % experiment)
+    write_tex_table(filename=filename, data=tabular.build(), path="./resources/")
 
 if __name__ == '__main__':
     experiment1 = Experiment(index=1, attribute='standardized', header=math('s'), table=DataPivotTable,
@@ -511,4 +510,4 @@ if __name__ == '__main__':
     confusion_matrix = ConfusionMatrix(aggregator.confusion_matrix())
     cm_tabular = Tabular()
     cm_tabular.body = confusion_matrix
-    write_tex_table(filename="cm", data=cm_tabular.build(), path=sys.argv[1])
+    write_tex_table(filename="cm", data=cm_tabular.build(), path='./resources/')

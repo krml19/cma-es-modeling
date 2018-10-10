@@ -187,8 +187,12 @@ class Aggragator:
     def normalize(self, series: pd.Series):
         scaler = QuantileTransformer()
         series = series.fillna(0)
-        scaler.fit(series.values.reshape(-1, 1))
-        series = series.applymap(lambda x: scaler.transform(x)[0][0])
+        scaler.fit(series)
+        values = scaler.transform(series.values)
+        for col in range(values.shape[0]):
+            for row in range(values.shape[1]):
+                series.iloc[col].iloc[row]= values[col][row]
+
         return series
 
     def normalize_sem(self, series: pd.Series, measure: Measure):

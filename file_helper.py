@@ -33,5 +33,5 @@ def write_data_frame(df: pd.DataFrame, path: str, filename: str, extension: str=
 
 def write_tex_table(filename: str, data: str=None, extension: str='.tex', path: str=Paths.tables.value):
     filename = path + filename + extension
-    with open(filename, "w") as file:
+    with open(filename, "w", encoding='utf-8') as file:
         file.write(data)
