@@ -3,8 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import math
-from matplotlib2tikz import save as tikz_save
-from matplotlib2tikz import get_tikz_code
+# from matplotlib2tikz import save as tikz_save
+# from matplotlib2tikz import get_tikz_code
 
 
 class Probabilities:

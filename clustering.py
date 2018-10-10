@@ -1,4 +1,4 @@
-from pyclustering.cluster import cluster_visualizer
+# from pyclustering.cluster import cluster_visualizer
 from pyclustering.cluster.xmeans import xmeans, splitting_type
 from pyclustering.utils import timedcall
 
@@ -41,11 +41,11 @@ def xmeans_clustering(data: np.ndarray, kmin: [int, None] = 1, kmax: [int, None]
         logger.debug("Initial centers: {},\n Execution time: {},\n Number of clusters: {},\n criterion: {}".format(
             initial_centers is not None, ticks, len(clusters), criterion_string))
 
-    if visualize:
-        visualizer = cluster_visualizer()
-        visualizer.set_canvas_title(criterion_string)
-        visualizer.append_clusters(clusters, data)
-        visualizer.append_cluster(centers, None, marker='*')
-        visualizer.show()
+    # if visualize:
+    #     visualizer = cluster_visualizer()
+    #     visualizer.set_canvas_title(criterion_string)
+    #     visualizer.append_clusters(clusters, data)
+    #     visualizer.append_cluster(centers, None, marker='*')
+    #     visualizer.show()
 
     return clusters

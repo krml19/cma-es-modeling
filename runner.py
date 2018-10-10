@@ -131,7 +131,7 @@ class AlgorithmRunner:
     def experiments_5(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), models: list = ['ball', 'simplex', 'cube']) -> list:
         return [self.data_source(margin=margin, seeds=seeds, K=K, N=N, models=models) for margin in [0.9, 1, 1.1]]
 
-    def experiments_6(self, seeds: range = range(0, 30), N: range = range(2, 8), K: range=range(1, 3), models: list = ['ball', 'simplex', 'cube']) -> list:
+    def experiments_6(self, seeds: range = range(0, 30), N: range = range(4, 5), K: range=range(1, 3), models: list = ['ball', 'simplex', 'cube']) -> list:
         return [
             self.data_source(seeds=seeds, N=N, train_sample=ts, models=models, K=K) for ts in [100, 200, 300, 400, 500]]
 
@@ -198,11 +198,11 @@ if __name__ == '__main__':
     runner = AlgorithmRunner()
     seeds = range(0, 5)
     experiments = flat([
-        runner.experiments_1(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
-        runner.experiments_2(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
-        runner.experiments_3(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
-        runner.experiments_4(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
-        runner.experiments_5(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
+        # runner.experiments_1(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
+        # runner.experiments_2(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
+        # runner.experiments_3(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
+        # runner.experiments_4(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
+        # runner.experiments_5(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
         runner.experiments_6(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex'])
         ])
     # experiments = runner.experiments_1(seeds=seeds)

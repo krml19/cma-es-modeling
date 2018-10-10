@@ -501,7 +501,7 @@ if __name__ == '__main__':
     experiment6 = Experiment(index=6, attribute='train_sample', header=math('|X|'),
                              table=DataPivotTable, split=None)
 
-    for experiment in [experiment1, experiment2, experiment3, experiment4, experiment5, experiment6]:
+    for experiment in [experiment6]:
     # for experiment in [experiment3]:
     # for experiment in [experiment1]:
         table(experiment=experiment)
