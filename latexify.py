@@ -6,6 +6,10 @@ import sys
 import numpy as np
 from logger import Logger
 import scipy.stats as stats
+from collections import namedtuple
+
+TableData = namedtuple('TableData',
+                               'cols alignment header_name groups header body formatted_rank pvalue groups_range grouped_midrule header_midrule')
 
 log = Logger(name='latex')
 
@@ -221,18 +225,22 @@ class DataPivotTable(DataTable):
             i = i + self.cols
         return grouped_midrules
 
-    def build(self) -> str:
+    def build(self) -> TableData:
         header = self.formatters['header'](self.attribute_values * len(self.measures), self.title)
         reducer = lambda x, y: str(x) + row_end + eol + str(y)
+        reducer2 = lambda x, y: str(x) + str(y)
 
         body = self.data.apply(self.format_series, axis=1)
         body = body if self.pivot else body.T
         body = body.T.stack().swaplevel().unstack().apply(self.format_row, axis=1)
-        body = reduce(reducer, body.values)
-        groups = ['\\multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=self.cols,
-                                                                             alignment='c', name=math(name))
-                  for name in self.measures]
-        groups = sep + reduce(lambda x, y: x + sep + y, groups)
+        # body = reduce(reducer2, body.values)
+        body = body.values
+        # groups = ['\\multicolumn{{{count}}}{{{alignment}}}{{{name}}}'.format(count=self.cols,
+        #                                                                      alignment='c', name=math(name))
+        #           for name in self.measures]
+        # groups = sep + reduce(lambda x, y: x + sep + y, groups)
+        groups = [math(name) for name in self.measures]
+
         rank = self.rank()
         formatted_rank = Formatter.format_rank(rank)
         pvalue = Formatter.format_rank(self.pvalue())
@@ -240,22 +248,96 @@ class DataPivotTable(DataTable):
         grouped_midrules = self.gr_midrules()
         header_midrules = self.gr_midrules(add_first_col=False)
 
-        return '\\toprule \n' \
-               '\\multicolumn{{{count}}}{{{alignment}}}{{{name}}} \\\\ \n' \
-               '\\midrule \n' \
-               '{groups} \\\\ \n' \
-               '{header_midrule} \n' \
-               '{header} \\\\ \n' \
-               '{grouped_midrule} \n' \
-               '{body} \\\\ \n' \
-               '{grouped_midrule} \n' \
-               '{rank} \\\\ \n' \
-               '{grouped_midrule} \n' \
-               '{pvalue} \\\\ \n' \
-               '\\bottomrule \n'.format(count=self.total_cols, alignment='c', name=self.top_header_name, groups=groups,
-                                        header=header, body=body, rank=formatted_rank, pvalue=pvalue, groups_range=
-                                        "2-%d" % self.total_cols, grouped_midrule=grouped_midrules,
-                                        header_midrule=header_midrules)
+        return TableData(self.total_cols, 'c', self.top_header_name, groups, header, body, formatted_rank, pvalue, "2-%d"% self.total_cols, grouped_midrules, header_midrules)
+        # return self.total_cols, 'c', self.top_header_name, groups, header, body, formatted_rank, pvalue, "2-%d"% self.total_cols, grouped_midrules, header_midrules
+        #
+        #
+        # return '\\toprule \n' \
+        #        '\\multicolumn{{{count}}}{{{alignment}}}{{{name}}} \\\\ \n' \
+        #        '\\midrule \n' \
+        #        '{groups} \\\\ \n' \
+        #        '{header_midrule} \n' \
+        #        '{header} \\\\ \n' \
+        #        '{grouped_midrule} \n' \
+        #        '{body} \\\\ \n' \
+        #        '{grouped_midrule} \n' \
+        #        '{rank} \\\\ \n' \
+        #        '{grouped_midrule} \n' \
+        #        '{pvalue} \\\\ \n' \
+        #        '\\bottomrule \n'.format(count=self.total_cols, alignment='c', name=self.top_header_name, groups=groups,
+        #                                 header=header, body=body, rank=formatted_rank, pvalue=pvalue, groups_range=
+        #                                 "2-%d" % self.total_cols, grouped_midrule=grouped_midrules,
+        #                                 header_midrule=header_midrules)
+
+
+class MultiTable:
+    def __init__(self):
+        self.tables: [TableData] = list()
+
+    def add_table(self, table: DataPivotTable):
+        _table = table.build()
+        if len(self.tables) > 0:
+            _table = TableData(_table.cols, _table.alignment, _table.header_name, _table.groups, _table.header,
+                               ['&' + row.split('&', 1)[1] for row in _table.body], _table.formatted_rank, _table.pvalue,
+                               _table.groups_range, _table.grouped_midrule, _table.header_midrule)
+        # else:
+            # _table = list(_table)
+        self.tables.append(_table)
+
+    def compact(self, func: callable, sep: str='&'):
+        return reduce(lambda x, y: x + sep + y, list(map(func, self.tables)))
+
+    def compact2(self, func: callable, sep: str='&'):
+        res = reduce(lambda x, y: x + sep + y, list(map(func, self.tables)))
+        return reduce(lambda x, y: x + '\\\\\n' + y, res)
+
+    def build(self) -> str:
+        # header_top = self.compact(lambda x: f'\\multicolumn{{{x.cols}}}{{{x.alignment}}}{{{x.header_name}}}')
+        # groups = self.compact(lambda x: x.groups)
+        # header_midrules = self.compact(lambda x: x.header_midrule)
+        # header = self.compact(lambda x: x.header)
+        # grouped_midrules = self.compact(lambda x: x.grouped_midrule)
+        body = self.compact2(lambda x: x.body)
+        rank = self.compact(lambda x: x.formatted_rank)
+        pvalue = self.compact(lambda x: x.pvalue)
+        # groups_range = self.compact(lambda x: x.groups_range)
+
+
+        top = """
+        \\begin{tabular}{cccccccccccccccccccccc}
+\cline{2-3} \cline{5-8} \cline{10-12} \cline{14-18} \cline{20-22} 
+ & \multicolumn{2}{c}{(a) Standardization} &  & \multicolumn{4}{c}{(b) $n_{c}$ } &  & \multicolumn{3}{c}{(c) $(k_{min},k_{max})$} &  & \multicolumn{5}{c}{(d) $\sigma_{0}$} &  & \multicolumn{3}{c}{(e) $m$}\tabularnewline
+Problem & Off & On &  & $2n$ & $2n^{2}$ & $2^{n}$ & $n^{3}$ &  & $(1,1)$ & $(1,\infty)$ & $(2,\infty)$ &  & $0.125$ & $0.25$ & $0.5$ & $1.0$ & $2.0$ &  & $0.9$ & $1.0$ & $1.1$\tabularnewline
+\cline{1-3} \cline{5-8} \cline{10-12} \cline{14-18} \cline{20-22}
+        """
+        body = f'{body} \\\\'
+        bottom = "\cline{1-3} \cline{5-8} \cline{10-12} \cline{14-18} \cline{20-22}\n" + \
+                 f'{rank}\tabularnewline\n' +\
+                 '\cline{1-3} \cline{5-8} \cline{10-12} \cline{14-18} \cline{20-22}\n' +\
+                 f'{pvalue}\tabularnewline\n' +\
+                 '\cline{1-3} \cline{5-8} \cline{10-12} \cline{14-18} \cline{20-22}\n' +\
+                 '\end{tabular}\n'
+
+        return top + body + bottom
+        # return '\\toprule \n' \
+        #        '{header_top} \\\\ \n' \
+        #        '\\midrule \n' \
+        #        '{groups} \\\\ \n' \
+        #        '{header_midrule} \n' \
+        #        '{header} \\\\ \n' \
+        #        '{grouped_midrule} \n' \
+        #        '{body} \\\\ \n' \
+        #        '{grouped_midrule} \n' \
+        #        '{rank} \\\\ \n' \
+        #        '{grouped_midrule} \n' \
+        #        '{pvalue} \\\\ \n' \
+        #        '\\bottomrule \n'.format(header_top=header_top, groups=groups,
+        #                                 header=header, body=body, rank=rank, pvalue=pvalue, groups_range=
+        #                                 groups_range, grouped_midrule=grouped_midrules,
+        #                                 header_midrule=header_midrules)
+
+    def print(self):
+        print(self.build())
 
 
 class InfoTable:
@@ -486,6 +568,18 @@ def save(experiment: Experiment, aggregator: Aggragator, data_frame: pd.DataFram
     log.debug("Finished: %s" % experiment)
     write_tex_table(filename=filename, data=tabular.build(), path="./resources/")
 
+
+def get_table_data(experiment: Experiment):
+    aggregator = Aggragator(experiment=experiment.index, benchmark_mode=experiment.benchmark_mode,
+                            attribute=experiment.attribute)
+
+    data_frame = aggregator.transform(split=experiment.split)
+
+    data_table = experiment.table(data_frame, experiment.header, attribute=aggregator.attribute,
+                                  attribute_values=aggregator.attribute_values)
+    return data_table
+
+
 if __name__ == '__main__':
     experiment1 = Experiment(index=1, attribute='standardized', header=math('s'), table=DataPivotTable,
                              split=None)
@@ -500,14 +594,22 @@ if __name__ == '__main__':
     experiment6 = Experiment(index=6, attribute='train_sample', header=math('|X|'),
                              table=DataPivotTable, split=None)
 
-    for experiment in [experiment6]:
+    multi_table = MultiTable()
+    [multi_table.add_table(get_table_data(experiment)) for experiment in [experiment1,
+                                                                          experiment2,
+                                                                          experiment3,
+                                                                          experiment4,
+                                                                          experiment5]]
+    multi_table.print()
+
     # for experiment in [experiment3]:
     # for experiment in [experiment1]:
-        table(experiment=experiment)
+    #     table(experiment=experiment)
         # pass
 
-    aggregator = Aggragator('best')
-    confusion_matrix = ConfusionMatrix(aggregator.confusion_matrix())
-    cm_tabular = Tabular()
-    cm_tabular.body = confusion_matrix
-    write_tex_table(filename="cm", data=cm_tabular.build(), path='./resources/')
+
+    # aggregator = Aggragator('best')
+    # confusion_matrix = ConfusionMatrix(aggregator.confusion_matrix())
+    # cm_tabular = Tabular()
+    # cm_tabular.body = confusion_matrix
+    # write_tex_table(filename="cm", data=cm_tabular.build(), path='./resources/')

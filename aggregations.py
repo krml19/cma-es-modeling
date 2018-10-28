@@ -35,7 +35,7 @@ class MeasureF1(Measure):
 
 
 class Aggragator:
-    def __init__(self, experiment, attribute: str = None, benchmark_mode: bool = False, measures: [Measure] = [MeasureF, MeasureF1]):
+    def __init__(self, experiment, attribute: str = None, benchmark_mode: bool = False, measures: [Measure] = [MeasureF]):
 
         self.attribute = attribute
         self.experiment = experiment
@@ -191,7 +191,7 @@ class Aggragator:
         values = scaler.transform(series.values)
         for col in range(values.shape[0]):
             for row in range(values.shape[1]):
-                series.iloc[col].iloc[row]= values[col][row]
+                series.iloc[col].iloc[row] = values[col][row]
 
         return series
 
