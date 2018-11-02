@@ -82,7 +82,7 @@ class Formatter:
     @staticmethod
     def format_color(x: float) -> str:
         x = np.round(x, decimals=5)
-        return '{},{},{}'.format(1 - x, x, 0)
+        return '{green!70!lime!%d!red!70!yellow!80!white}' % int(100 * x)
 
     @staticmethod
     def format_error(x: float) -> str:
@@ -94,7 +94,7 @@ class Formatter:
     def format_cell(norm_rank: float, value: float, error: float) -> str:
         error = error / value if value > 0 else 0
         error = min(error, 1)
-        return '\cellcolor[rgb]{%s} %0.2f %s ' % \
+        return '\cellcolor{%s} %0.2f %s ' % \
                (Formatter.format_color(norm_rank), value, Formatter.format_error(error))
 
     @staticmethod
@@ -153,7 +153,7 @@ class DataTable:
                                                                               x) + row_end + eol
 
     def rank(self, data: pd.DataFrame):
-        result = '\\midrule\n' + math("ranga") + sep + reduce(lambda x, y: str(x) + sep + str(y),
+        result = '\\midrule\n' + math("Rank") + sep + reduce(lambda x, y: str(x) + sep + str(y),
                                                                 map(lambda x: "%0.2f" % x,
                                                                     data['rank'].mean())) + row_end + eol
         return result
@@ -202,13 +202,13 @@ class DataPivotTable(DataTable):
         return self.formatters['first_row'](series.name) + sep + reduce(lambda x, y: x + sep + y, series)
 
     def rank(self):
-        return pd.Series(data=self.data['rank'].mean(level=0).stack(), name='ranga')
+        return pd.Series(data=self.data['rank'].mean(level=0).stack(), name='Rank')
 
     def pvalue(self):
         df = pd.DataFrame()
         for measure in self.measures:
             df[measure] = self.stats(self.data['rank'].unstack(level=1).loc[measure].unstack())
-        return pd.Series(data=df.unstack(), name='p-wartość')
+        return pd.Series(data=df.unstack(), name='p-value')
 
     def stats(self, df: pd.DataFrame):
         argmin = df.mean(axis=1).argmin()
@@ -278,10 +278,10 @@ class MultiTable:
         _table = table.build()
         if len(self.tables) > 0:
             _table = TableData(_table.cols, _table.alignment, _table.header_name, _table.groups, _table.header,
-                               ['&' + row.split('&', 1)[1] for row in _table.body], _table.formatted_rank, _table.pvalue,
+                               ['&' + row.split('&', 1)[1] for row in _table.body],
+                               '&' + _table.formatted_rank.split('&', 1)[1],
+                               '&' + _table.pvalue.split('&', 1)[1],
                                _table.groups_range, _table.grouped_midrule, _table.header_midrule)
-        # else:
-            # _table = list(_table)
         self.tables.append(_table)
 
     def compact(self, func: callable, sep: str='&'):
@@ -292,49 +292,27 @@ class MultiTable:
         return reduce(lambda x, y: x + '\\\\\n' + y, res)
 
     def build(self) -> str:
-        # header_top = self.compact(lambda x: f'\\multicolumn{{{x.cols}}}{{{x.alignment}}}{{{x.header_name}}}')
-        # groups = self.compact(lambda x: x.groups)
-        # header_midrules = self.compact(lambda x: x.header_midrule)
-        # header = self.compact(lambda x: x.header)
-        # grouped_midrules = self.compact(lambda x: x.grouped_midrule)
         body = self.compact2(lambda x: x.body)
         rank = self.compact(lambda x: x.formatted_rank)
         pvalue = self.compact(lambda x: x.pvalue)
-        # groups_range = self.compact(lambda x: x.groups_range)
 
 
         top = """
         \\begin{tabular}{cccccccccccccccccccccc}
 \cline{2-3} \cline{5-8} \cline{10-12} \cline{14-18} \cline{20-22} 
- & \multicolumn{2}{c}{(a) Standardization} &  & \multicolumn{4}{c}{(b) $n_{c}$ } &  & \multicolumn{3}{c}{(c) $(k_{min},k_{max})$} &  & \multicolumn{5}{c}{(d) $\sigma_{0}$} &  & \multicolumn{3}{c}{(e) $m$}\tabularnewline
-Problem & Off & On &  & $2n$ & $2n^{2}$ & $2^{n}$ & $n^{3}$ &  & $(1,1)$ & $(1,\infty)$ & $(2,\infty)$ &  & $0.125$ & $0.25$ & $0.5$ & $1.0$ & $2.0$ &  & $0.9$ & $1.0$ & $1.1$\tabularnewline
+ & \multicolumn{2}{c}{(a) Standardization} &  & \multicolumn{4}{c}{(b) $n_{c}$ } &  & \multicolumn{3}{c}{(c) $(k_{min},k_{max})$} &  & \multicolumn{5}{c}{(d) $\sigma_{0}$} &  & \multicolumn{3}{c}{(e) $m$}\\tabularnewline
+Problem & Off & On &  & $2n$ & $2n^{2}$ & $2^{n}$ & $n^{3}$ &  & $(1,1)$ & $(1,\infty)$ & $(2,\infty)$ &  & $0.125$ & $0.25$ & $0.5$ & $1.0$ & $2.0$ &  & $0.9$ & $1.0$ & $1.1$\\tabularnewline
 \cline{1-3} \cline{5-8} \cline{10-12} \cline{14-18} \cline{20-22}
         """
         body = f'{body} \\\\'
         bottom = "\cline{1-3} \cline{5-8} \cline{10-12} \cline{14-18} \cline{20-22}\n" + \
-                 f'{rank}\tabularnewline\n' +\
+                 f'{rank}\\tabularnewline\n' +\
                  '\cline{1-3} \cline{5-8} \cline{10-12} \cline{14-18} \cline{20-22}\n' +\
-                 f'{pvalue}\tabularnewline\n' +\
+                 f'{pvalue}\\tabularnewline\n' +\
                  '\cline{1-3} \cline{5-8} \cline{10-12} \cline{14-18} \cline{20-22}\n' +\
                  '\end{tabular}\n'
 
         return top + body + bottom
-        # return '\\toprule \n' \
-        #        '{header_top} \\\\ \n' \
-        #        '\\midrule \n' \
-        #        '{groups} \\\\ \n' \
-        #        '{header_midrule} \n' \
-        #        '{header} \\\\ \n' \
-        #        '{grouped_midrule} \n' \
-        #        '{body} \\\\ \n' \
-        #        '{grouped_midrule} \n' \
-        #        '{rank} \\\\ \n' \
-        #        '{grouped_midrule} \n' \
-        #        '{pvalue} \\\\ \n' \
-        #        '\\bottomrule \n'.format(header_top=header_top, groups=groups,
-        #                                 header=header, body=body, rank=rank, pvalue=pvalue, groups_range=
-        #                                 groups_range, grouped_midrule=grouped_midrules,
-        #                                 header_midrule=header_midrules)
 
     def print(self):
         print(self.build())
