@@ -10,6 +10,7 @@ class Paths(Enum):
     test = "datasets/test"
     valid = "datasets/validation"
     tables = "latex/tables/"
+    best_models = "results/"
 
     def path(self, filename: str):
         return self.value + filename

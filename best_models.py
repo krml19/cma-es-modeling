@@ -1,6 +1,8 @@
 import sqlite3
+from functools import reduce
 
 import numpy as np
+from file_helper import write_tex_table, Paths
 
 from constraints_generator import generate as n_constraints
 sql = """
@@ -27,7 +29,8 @@ combinations = [('ball', 1), ('cube', 1), ('simplex', 1), ('ball', 2), ('cube', 
 
 if __name__ == '__main__':
     for params in combinations:
-        print(f'{params[0]}_{params[1]}_3')
+        model = f'{params[0]}_{params[1]}_3'
+        data = []
         res = connection.execute(sql, params).fetchone()
         nc = n_constraints(res[1], 3)
         constraints = connection.execute(sql2, [res[0]] * 6).fetchall()
@@ -43,8 +46,8 @@ if __name__ == '__main__':
             print(f"Cluster {i}:")
             for index, (c, w) in enumerate(zip(c_cluster, w_cluster)):
                 constraint = f'c{index}: {c[0]}x1 {sign(c[1])}x2 + {sign(c[2])}x3 < {w[0]}'
-                print(constraint)
-
+                data.append(constraint)
+        write_tex_table(model, reduce(lambda x, y: x + '\n' + y, data), '.txt', Paths.best_models.value)
         # subject_to = f"""
         # Subject To
         # {constraints}
