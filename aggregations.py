@@ -33,6 +33,11 @@ class MeasureF1(Measure):
     sem = 'f1_sem'
     name = 'F_1'
 
+class MeasureTime(Measure):
+    grouping_attribute = 'time'
+    sem = 'time_sem'
+    name = 'CPU Time'
+
 
 class Aggragator:
     def __init__(self, experiment, attribute: str = None, benchmark_mode: bool = False, measures: [Measure] = [MeasureF]):

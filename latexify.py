@@ -1,6 +1,6 @@
 import pandas as pd
 from functools import reduce
-from aggregations import Aggragator, Measure, MeasureF, MeasureF1
+from aggregations import Aggragator, Measure, MeasureF, MeasureF1, MeasureTime
 from file_helper import write_tex_table
 import sys
 import numpy as np
@@ -80,7 +80,9 @@ def bm(text):
 
 class Formatter:
     @staticmethod
-    def format_color(x: float) -> str:
+    def format_color(x: float, reverse = False) -> str:
+        if reverse:
+            x = 1 - x
         x = np.round(x, decimals=5)
         return '{green!70!lime!%d!red!70!yellow!80!white}' % int(100 * x)
 
@@ -91,11 +93,11 @@ class Formatter:
         return '\\begin{tikzpicture}[y=0.75em,baseline=1pt]\\draw[very thick] (0,0) -- (0,%f);\\end{tikzpicture}' % x
 
     @staticmethod
-    def format_cell(norm_rank: float, value: float, error: float) -> str:
+    def format_cell(norm_rank: float, value: float, error: float, reverse_colors: bool = False) -> str:
         error = error / value if value > 0 else 0
         error = min(error, 1)
-        return '\cellcolor{%s} %0.2f %s ' % \
-               (Formatter.format_color(norm_rank), value, Formatter.format_error(error))
+        return '\cellcolor%s %0.2f %s ' % \
+               (Formatter.format_color(norm_rank, reverse_colors), value, Formatter.format_error(error))
 
     @staticmethod
     def format_header(attribute_values, name):
@@ -180,7 +182,7 @@ class DataTable:
 class DataPivotTable(DataTable):
     def __init__(self, data: pd.DataFrame, top_header_name: str, attribute: str, attribute_values: list,
                  pivot: bool = True, header_formatter=Formatter.format_header,
-                 row_formatter=Formatter.first_row_formatter):
+                 row_formatter=Formatter.first_row_formatter, reverse_colors=False):
         data.fillna(value=0, inplace=True)
         super().__init__(data=data, top_header_name=top_header_name, attribute=attribute,
                          attribute_values=attribute_values)
@@ -190,11 +192,13 @@ class DataPivotTable(DataTable):
                            'first_row': row_formatter}
         self.measures = data.index.levels[0]
         self.total_cols = len(self.measures) * self.cols + 1
+        self.reverse_colors = reverse_colors
 
     def format_series(self, series):
         col_formatter = lambda s, attribute: Formatter.format_cell(s[('rank_norm', attribute)],
                                                                    s[('f_mean', attribute)],
-                                                                   s[('sem_norm', attribute)])
+                                                                   s[('sem_norm', attribute)],
+                                                                   self.reverse_colors)
         formatted_cols = [col_formatter(series, attribute) for attribute in self.attribute_values]
         return pd.Series(data=formatted_cols, name=series.name)
 
@@ -500,13 +504,16 @@ class CommentBlock:
 
 
 class Experiment:
-    def __init__(self, index: int, attribute, header, table, split, benchmark_mode=False):
+    def __init__(self, index: int, attribute, header, table, split, benchmark_mode=False, measure:[Measure]=[MeasureF],
+                 reverse_colors: bool = False):
         self.index = index
         self.attribute = attribute
         self.header = header
         self.table = table
         self.split = split
         self.benchmark_mode = benchmark_mode
+        self.measure = measure
+        self.reverse_colors = reverse_colors
 
     def __str__(self):
         return "Experiment %d:{%s} " % (self.index, self.attribute)
@@ -554,7 +561,7 @@ def get_table_data(experiment: Experiment):
     data_frame = aggregator.transform(split=experiment.split)
 
     data_table = experiment.table(data_frame, experiment.header, attribute=aggregator.attribute,
-                                  attribute_values=aggregator.attribute_values)
+                                  attribute_values=aggregator.attribute_values, reverse_colors=experiment.reverse_colors)
     return data_table
 
 
@@ -570,14 +577,19 @@ if __name__ == '__main__':
     experiment5 = Experiment(index=5, attribute='margin', header=math('m'),
                              table=DataPivotTable, split=None)
     experiment6 = Experiment(index=6, attribute='train_sample', header=math('|X|'),
-                             table=DataPivotTable, split=None)
+                             table=DataPivotTable, split=None, measure=[MeasureF1])
+    experiment7 = Experiment(index=6, attribute='train_sample', header=math('|X|'),
+                             table=DataPivotTable, split=None, measure=[MeasureTime], reverse_colors=True)
 
     multi_table = MultiTable()
-    [multi_table.add_table(get_table_data(experiment)) for experiment in [experiment1,
-                                                                          experiment2,
-                                                                          experiment3,
-                                                                          experiment4,
-                                                                          experiment5]]
+    # [multi_table.add_table(get_table_data(experiment)) for experiment in [experiment1,
+    #                                                                       experiment2,
+    #                                                                       experiment3,
+    #                                                                       experiment4,
+    #                                                                       experiment5]]
+
+    [multi_table.add_table(get_table_data(experiment)) for experiment in [experiment6,
+                                                                          experiment7]]
     multi_table.print()
 
     # for experiment in [experiment3]:
