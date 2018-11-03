@@ -1,11 +1,11 @@
 import numpy as np
 import itertools
 import random
+import math
 
 
-def samples(bounds: list, rows: int, seed: [int, None] = None):
-    if seed is not None:
-        np.random.seed(seed=seed)
+def samples(bounds: list, rows: int, seed: int):
+    np.random.seed(seed=seed)
     return np.vstack(
         [np.random.uniform(low=low, high=high, size=rows) for low, high in bounds]).T
 
@@ -48,6 +48,7 @@ def scale_factor(train_data_set: np.array, margin: float):
 
 def bounding_sphere(n: int, train_data_set: np.array, dim: int, r=1, margin: float=2.0):
     x0 = cartesian(n, r=r, dim=dim)
-    x0 = x0 / (np.sign(x0) * scale_factor(train_data_set=train_data_set, margin=margin))
+    sign = np.vectorize(lambda x: 1 if x >= 0 else -1)
+    x0 = sign(x0)
+    x0 = x0 / scale_factor(train_data_set=train_data_set, margin=margin)
     return np.concatenate(x0).flatten()
-
