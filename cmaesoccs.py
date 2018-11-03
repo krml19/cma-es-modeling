@@ -241,6 +241,7 @@ class CMAESAlgorithm:
                 cluster['w'] = to_str(W[0])
                 cluster['w0'] = to_str(W[1])
                 cluster['f'] = es[1]
+            log.info("Trying to save.")
 
         except Exception as e:
             experiment['error'] = e
