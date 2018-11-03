@@ -48,6 +48,7 @@ def scale_factor(train_data_set: np.array, margin: float):
 
 def bounding_sphere(n: int, train_data_set: np.array, dim: int, r=1, margin: float=2.0):
     x0 = cartesian(n, r=r, dim=dim)
+    sign = np.vectorize(lambda x: 1 if x >= 0 else -1)
+    x0 = sign(x0)
     x0 = x0 / scale_factor(train_data_set=train_data_set, margin=margin)
     return np.concatenate(x0).flatten()
-

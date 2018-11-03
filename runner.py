@@ -196,7 +196,7 @@ class AlgorithmRunner:
 
 if __name__ == '__main__':
     runner = AlgorithmRunner()
-    seeds = range(0, 10)
+    seeds = range(0, 15)
     experiments = flat([
         runner.experiments_1(seeds=seeds),
         runner.experiments_2(seeds=seeds),
