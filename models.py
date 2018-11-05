@@ -48,7 +48,7 @@ class BenchmarkModel:
         df = df.drop(['valid'], axis=1, errors='ignore')
         return df.head(rows)
 
-    def __generate_train_subset(self, seed=None, sample_size=int(1e6)):
+    def __generate_train_subset(self, seed=None, sample_size=int(5e5)):
         cols = self.variable_names(self.variables)
         self.logger.debug('Sampling points')
         samples = sampler.samples(self.bounds, rows=sample_size, seed=seed)
@@ -58,14 +58,16 @@ class BenchmarkModel:
         df['valid'] = self.generate_valid_column(df)
         return df[(df['valid'] == True)].reset_index(drop=True)
 
-    def dataset(self, seed, labeled: bool = False, nrows = int(1e6)):
+    def dataset(self, seed, labeled: bool = False, nrows=int(1e5)):
         cols = self.variable_names(self.variables)
         samples = sampler.samples(self.bounds, rows=nrows, seed=seed)
-        df = pd.DataFrame(samples, columns=cols)
+
         if labeled:
+            df = pd.DataFrame(samples, columns=cols)
             df['valid'] = self.generate_valid_column(df)
-        assert df.shape[0] == nrows
-        return df.values
+            assert df.shape[0] == nrows
+            return df.values
+        return samples
 
     def benchmark_objective_function(self, X: np.ndarray, w: np.ndarray, w0: np.ndarray) -> np.ndarray:
         return np.apply_along_axis(lambda x: self.matches_constraints(x), 1, X)
