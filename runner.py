@@ -206,9 +206,9 @@ class AlgorithmRunner:
 
 if __name__ == '__main__':
     runner = AlgorithmRunner()
-    seeds = range(0, 1)
+    seeds = range(0, 10)
     experiments = flat([
         runner.case_study(seeds=seeds)
         ])
-    runner.run(experiments)
-    # runner.run_slurm(experiments)
+    # runner.run(experiments)
+    runner.run_slurm(experiments)
