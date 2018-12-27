@@ -62,26 +62,30 @@ class CMAESAlgorithm:
             self.clusters = xmeans_clustering(self.train_X, kmin=clustering_k_min, visualize=False)
 
     def satisfies_constraints(self, X: np.ndarray, w: np.ndarray, w0: np.ndarray) -> np.ndarray:
+        log.debug("11")
         x = np.matmul(X, w)
+        log.debug("12")
         x = x <= np.sign(w0)
+        log.debug("13")
         return x.prod(axis=1)
 
     def __objective_function(self, w):
+        log.debug("1")
         w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
         w0 = w[-1:]
         w = w[:-1]
-
+        log.debug("2")
         # recall
         card_b, tp = self.current_cluster.shape[0], self.matches_constraints(self.current_cluster, w, w0).sum()
         recall = tp / card_b
-
+        log.debug("3")
         # p
         card_p, p = self.valid_X.shape[0], self.matches_constraints(self.valid_X, w, w0).sum()
-
+        log.debug("4")
         # p_y
         pr_y = p / card_p
         pr_y = max(pr_y, 1e-6)  # avoid division by 0
-
+        log.debug("5")
         # f
         f = (recall ** 2) / pr_y if recall > 0.0 else -1.0 / pr_y
         f = -f
@@ -152,7 +156,8 @@ class CMAESAlgorithm:
         log.debug("Expanding")
         x0 = self.__expand_initial_w(x0=x0)
         res = cma.fmin(self.__objective_function, x0=x0, sigma0=self.__sigma0,
-                       options={'seed': self.__seed, 'maxiter': self.max_iter, 'tolfun': 1e-1, 'timeout': 60 * 60}, restart_from_best=True, eval_initial_x=True)
+                       options={'seed': self.__seed, 'maxiter': self.max_iter, 'tolfun': 1e-1, 'timeout': "60"},
+                       restart_from_best=True, eval_initial_x=True)
 
         return res
 
@@ -241,6 +246,7 @@ class CMAESAlgorithm:
                 cluster['w'] = to_str(W[0])
                 cluster['w0'] = to_str(W[1])
                 cluster['f'] = es[1]
+            log.info("Trying to save.")
 
         except Exception as e:
             experiment['error'] = e

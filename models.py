@@ -1,3 +1,4 @@
+import re
 import numpy as np
 import pandas as pd
 
@@ -46,7 +47,7 @@ class BenchmarkModel:
         df = df.drop(['valid'], axis=1, errors='ignore')
         return df.head(rows)
 
-    def __generate_train_subset(self, seed=None, sample_size=int(1e6)):
+    def __generate_train_subset(self, seed=None, sample_size=int(5e5)):
         cols = self.variable_names(self.variables)
         self.logger.debug('Sampling points')
         samples = sampler.samples(self.bounds, rows=sample_size, seed=seed)
@@ -56,14 +57,16 @@ class BenchmarkModel:
         df['valid'] = self.generate_valid_column(df)
         return df[(df['valid'] == True)].reset_index(drop=True)
 
-    def dataset(self, seed, labeled: bool = False, nrows = int(1e6)):
+    def dataset(self, seed, labeled: bool = False, nrows=int(1e5)):
         cols = self.variable_names(self.variables)
         samples = sampler.samples(self.bounds, rows=nrows, seed=seed)
-        df = pd.DataFrame(samples, columns=cols)
+
         if labeled:
+            df = pd.DataFrame(samples, columns=cols)
             df['valid'] = self.generate_valid_column(df)
-        assert df.shape[0] == nrows
-        return df.values
+            assert df.shape[0] == nrows
+            return df.values
+        return samples
 
     def benchmark_objective_function(self, X: np.ndarray, w: np.ndarray, w0: np.ndarray) -> np.ndarray:
         return np.apply_along_axis(lambda x: self.matches_constraints(x), 1, X)
@@ -196,6 +199,7 @@ class DataModel:
             'ball': Ball(n=n, B=B),
             'cube': Cube(n=n, B=B),
             'simplex': Simplex(n=n, B=B),
+            'case_study': CaseStudyModel(B=B)
         }[name]
 
     def __filename(self, path) -> str:
@@ -205,6 +209,10 @@ class DataModel:
         return pd.read_csv(filename, nrows=nrows).values
 
     def train_set(self) -> np.ndarray:
+        if isinstance(self.benchmark_model, CaseStudyModel):
+            train = pd.read_csv('./data/Rice-nonoise2.csv', nrows=None, delimiter=';')
+            train.drop('Type', inplace=True, axis=1)
+            return train.values
         return self.__get_dataset(self.__filename(Paths.train.value), nrows=self.train_sample)
 
     def test_set(self) -> tuple:
@@ -219,3 +227,16 @@ class DataModel:
     def valid_set2(self) -> np.ndarray:
         valid = self.benchmark_model.dataset(seed=self.seed + 10000)
         return valid.astype(float)
+
+
+class CaseStudyModel(BenchmarkModel):
+
+    def __init__(self, d=2.7, B=list([1, 1])):
+        header = pd.read_csv('./data/Rice-nonoise2.csv', delimiter=';', nrows=0)
+        header.drop(['Type'], inplace=True, axis=1)
+        n = len(header.keys())
+        self.header = header
+        super().__init__(n=n, d=d, name='case_study', B=B)
+
+        self.bounds = [(float(re.sub(r'.*\|(.*)\|.*', r'\1', key)), float(re.sub(r'.*\|(.*)\].*', r'\1', key))) for key in
+                       header.keys()]
