@@ -99,3 +99,26 @@ ENV/
 
 # mypy
 .mypy_cache/
+.idea/
+
+# cma
+*.dat
+
+# project specific
+data/
+drawings/
+datasets/
+
+# db
+*.sqlite
+*.sqlite-journal
+
+# archives
+*.zip
+
+resources/
+
+# cython
+*.c
+*.so
+build/
