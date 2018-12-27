@@ -1,10 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from ball import Ball
-from cube import Cube
-from simplex import Simplex
-from benchmark_model import BenchmarkModel
+from models import BenchmarkModel, Cube, Simplex, Ball
 from file_helper import Paths
 import Problem
 import sample
@@ -24,9 +21,9 @@ class DataModel:
     def __get_model(self, name, k, n) -> BenchmarkModel:
         B = [1] * k
         return {
-            'ball': Ball(i=n, B=B),
-            'cube': Cube(i=n, B=B),
-            'simplex': Simplex(i=n, B=B),
+            'ball': Ball(n=n, B=B),
+            'cube': Cube(n=n, B=B),
+            'simplex': Simplex(n=n, B=B),
         }[name]
 
     def __problem(self, name):

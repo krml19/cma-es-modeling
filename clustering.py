@@ -1,4 +1,4 @@
-# from pyclustering.cluster import cluster_visualizer
+from pyclustering.cluster import cluster_visualizer
 from pyclustering.cluster.xmeans import xmeans, splitting_type
 from pyclustering.utils import timedcall
 
@@ -6,17 +6,11 @@ import numpy as np
 from logger import Logger
 from sklearn.cluster import KMeans
 
-'''
-Example usage
-data: np.ndarray = pd.read_csv('data/train/simplex3_0.csv', nrows=int(1e3)).values
-clusters = xmeans_clustering(data=data)
-'''
-
-
+# Based on: https://github.com/annoviko/pyclustering/blob/master/pyclustering/cluster/examples/xmeans_examples.py
 def xmeans_clustering(data: np.ndarray, kmin: [int, None] = 1, kmax: [int, None] = 20, tolerance: float = 0.025,
                       criterion: enumerate = splitting_type.BAYESIAN_INFORMATION_CRITERION, ccore: bool = True,
                       logger=Logger(name='clustering'),
-                      visualize: bool = True) -> np.ndarray:
+                      visualize: bool = False) -> np.ndarray:
 
     # Initial centers - KMeans algorithm
     kmeans = KMeans(n_clusters=kmin)
@@ -41,11 +35,11 @@ def xmeans_clustering(data: np.ndarray, kmin: [int, None] = 1, kmax: [int, None]
         logger.debug("Initial centers: {},\n Execution time: {},\n Number of clusters: {},\n criterion: {}".format(
             initial_centers is not None, ticks, len(clusters), criterion_string))
 
-    # if visualize:
-    #     visualizer = cluster_visualizer()
-    #     visualizer.set_canvas_title(criterion_string)
-    #     visualizer.append_clusters(clusters, data)
-    #     visualizer.append_cluster(centers, None, marker='*')
-    #     visualizer.show()
+    if visualize:
+        visualizer = cluster_visualizer()
+        visualizer.set_canvas_title(criterion_string)
+        visualizer.append_clusters(clusters, data)
+        visualizer.append_cluster(centers, None, marker='*')
+        visualizer.show()
 
     return clusters
