@@ -37,7 +37,7 @@ class AlgorithmRunner:
                 filtered.append(algorithm)
             else:
                 existing = existing + 1
-        log.info("Number of exisiting experiments: {}/{}".format(existing, len(experiments)))
+        log.info("Number of existing experiments: {}/{}".format(existing, len(experiments)))
         return filtered
 
     def convert_to_sql_params(self, algorithm_params: dict):
@@ -123,7 +123,7 @@ class AlgorithmRunner:
             seq_of_params = [self.convert_to_sql_params(experiment) for experiment in experiments]
             db_experiments = [database.engine.execute(self.sql, params).fetchone()[0] for params in seq_of_params]
             filtered = list(filter(lambda t: t[0] > 0, zip(db_experiments, experiments)))
-            log.info("Number of exisiting experiments in experiment {}: {}/{}".format(i, len(filtered), len(experiments)))
+            log.info("Number of existing experiments in experiment {}: {}/{}".format(i, len(filtered), len(experiments)))
 
     def run_instance(self, inopts: dict):
         algorithm = CMAESAlgorithm(**inopts)
