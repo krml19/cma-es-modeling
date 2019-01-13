@@ -169,6 +169,15 @@ class CMAESAlgorithm:
             w = np.split(w, self.__n_constraints, axis=1)
         return np.concatenate(w).flatten(), np.concatenate(w0)
 
+    def to_mathematica(self, W):
+        output = ""
+        for i, c in enumerate(np.split(W[0], self.__n_constraints)):
+            for j in range(c.shape[0]):
+                output += "%fx[%d] + " % (c[j], j+1)
+            output = output[:-2] + "< %f &&\n" % W[1][i]
+        output = output[:-4]
+        return output
+
     def experiment(self):
 
         start = time.process_time()
@@ -237,19 +246,27 @@ class CMAESAlgorithm:
             
             for i, es in enumerate(self.__results):
 
-                W_start = self.split_w(es[8].x0, split_w=True)
-                W = self.split_w(es[0], split_w=True)
+                W_start = list(self.split_w(es[8].x0, split_w=True))
+                W = list(self.split_w(es[0], split_w=True))
+                if self.__scaler is not None:
+                    # destandardize
+                    W_start[0] /= np.tile(self.__scaler.scale_, self.__n_constraints)
+                    W_start[1] += np.sum(np.split(W_start[0] * np.tile(self.__scaler.mean_, self.__n_constraints), self.__n_constraints), axis=1)
+                    W[0] /= np.tile(self.__scaler.scale_, self.__n_constraints)
+                    W[1] += np.sum(np.split(W[0] * np.tile(self.__scaler.mean_, self.__n_constraints), self.__n_constraints), axis=1)
 
                 cluster = experiment.new_child_data_set('cluster_{}'.format(i))
                 cluster['w_start'] = to_str(W_start[0])
                 cluster['w0_start'] = to_str(W_start[1])
+                cluster["w_start_mathematica"] = self.to_mathematica(W_start)
                 cluster['w'] = to_str(W[0])
                 cluster['w0'] = to_str(W[1])
+                cluster['w_mathematica'] = self.to_mathematica(W)
                 cluster['f'] = es[1]
             log.info("Trying to save.")
 
         except Exception as e:
-            experiment['error'] = e
+            experiment['error'] = str(e)
             log.error("Cannot process: {}".format(self.sql_params))
             print(e)
         finally:
