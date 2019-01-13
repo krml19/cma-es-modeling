@@ -1,7 +1,7 @@
 import pandas as pd
 from functools import reduce
 from aggregations import Aggragator, Measure, MeasureF, MeasureF1, MeasureTime
-from file_helper import write_tex_table
+from file_helper import write_file
 import sys
 import numpy as np
 from logger import Logger
@@ -551,7 +551,7 @@ def save(experiment: Experiment, aggregator: Aggragator, data_frame: pd.DataFram
 
     # if len(sys.argv) > 1:
     log.debug("Finished: %s" % experiment)
-    write_tex_table(filename=filename, data=tabular.build(), path="./resources/")
+    write_file(filename=filename, data=tabular.build(), path="./resources/")
 
 
 def get_table_data(experiment: Experiment):
