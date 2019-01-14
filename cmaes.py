@@ -1,9 +1,11 @@
 import cma
 import numpy as np
+import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from functools import reduce
 
-from models import DataModel
+from data_model import DataModel
+import draw
 from experimentdatabase import Database
 from logger import Logger
 from sampler import bounding_sphere
@@ -25,7 +27,7 @@ class CMAESAlgorithm:
     def __init__(self, constraints_generator: str, sigma0: float,
                  scaler: bool, model_name: str, k: int, n: int, margin: float,
                  x0: np.ndarray = None, benchmark_mode: bool = False, clustering_k_min: int=0, seed: int = 404,
-                 db: str = 'experiments', max_iter: int = int(5e2), train_sample: int = 500):
+                 db: str = 'experiments', draw: bool = False, max_iter: int = int(1e2), train_sample: int = 500):
         data_model = DataModel(name=model_name, k=k, n=n, seed=seed, train_sample=train_sample)
 
         self.__n_constraints = cg.generate(constraints_generator, n)
@@ -49,6 +51,7 @@ class CMAESAlgorithm:
         self.__seed = seed
         self.db = db
         self.benchmark_mode = benchmark_mode
+        self.draw = draw
         self.time_delta = None
         self.current_cluster = None
         self.max_iter = max_iter
@@ -62,30 +65,26 @@ class CMAESAlgorithm:
             self.clusters = xmeans_clustering(self.train_X, kmin=clustering_k_min, visualize=False)
 
     def satisfies_constraints(self, X: np.ndarray, w: np.ndarray, w0: np.ndarray) -> np.ndarray:
-        log.debug("11")
         x = np.matmul(X, w)
-        log.debug("12")
         x = x <= np.sign(w0)
-        log.debug("13")
         return x.prod(axis=1)
 
     def __objective_function(self, w):
-        log.debug("1")
         w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
         w0 = w[-1:]
         w = w[:-1]
-        log.debug("2")
+
         # recall
         card_b, tp = self.current_cluster.shape[0], self.matches_constraints(self.current_cluster, w, w0).sum()
         recall = tp / card_b
-        log.debug("3")
+
         # p
         card_p, p = self.valid_X.shape[0], self.matches_constraints(self.valid_X, w, w0).sum()
-        log.debug("4")
+
         # p_y
         pr_y = p / card_p
         pr_y = max(pr_y, 1e-6)  # avoid division by 0
-        log.debug("5")
+
         # f
         f = (recall ** 2) / pr_y if recall > 0.0 else -1.0 / pr_y
         f = -f
@@ -155,9 +154,13 @@ class CMAESAlgorithm:
             x0 = self.__x0
         log.debug("Expanding")
         x0 = self.__expand_initial_w(x0=x0)
+        f = self.__objective_function(np.array(x0))
+        if self.draw:
+            self.__draw_results(x0)
         res = cma.fmin(self.__objective_function, x0=x0, sigma0=self.__sigma0,
-                       options={'seed': self.__seed, 'maxiter': self.max_iter, 'tolfun': 1e-1, 'timeout': "60"},
-                       restart_from_best=True, eval_initial_x=True)
+                       options={'seed': self.__seed, 'maxiter': self.max_iter, 'tolfun': 1e-1, 'timeout': 60 * 30}, restart_from_best=True, eval_initial_x=True)
+        if self.draw:
+            self.__draw_results(res[0])
 
         return res
 
@@ -169,14 +172,30 @@ class CMAESAlgorithm:
             w = np.split(w, self.__n_constraints, axis=1)
         return np.concatenate(w).flatten(), np.concatenate(w0)
 
-    def to_mathematica(self, W):
-        output = ""
-        for i, c in enumerate(np.split(W[0], self.__n_constraints)):
-            for j in range(c.shape[0]):
-                output += "%fx[%d] + " % (c[j], j+1)
-            output = output[:-2] + "< %f &&\n" % W[1][i]
-        output = output[:-4]
-        return output
+    def __draw_results(self, w, title=None):
+        if self.valid_X.shape[1] > 4:
+            return
+
+        w = np.reshape(w, newshape=(self.__n_constraints, -1)).T
+        w0 = w[-1:]
+        w = w[:-1]
+
+        names = ['x_{}'.format(x) for x in np.arange(self.valid_X.shape[1])]
+        data = self.valid_X if self.__scaler is None else self.__scaler.inverse_transform(self.valid_X)
+
+        valid = pd.DataFrame(data=data, columns=names)
+        valid['valid'] = pd.Series(data=self.matches_constraints(self.valid_X, w, w0), name='valid')
+
+        train = self.current_cluster if self.__scaler is None else self.__scaler.inverse_transform(self.current_cluster)
+        train = pd.DataFrame(data=train, columns=names)
+        train['valid'] = pd.Series(data=self.matches_constraints(self.current_cluster, w, w0), name='valid')
+        # train['valid'] = self.__test_Y
+        if valid.shape[1] == 3:
+            draw.draw2dmodel(df=valid, train=train, constraints=np.split(w, self.__n_constraints, axis=1), title=title, model=self.__data_model.benchmark_model.name)
+        elif valid.shape[1] == 4:
+            draw.draw3dmodel(df=valid, train=train, constraints=np.split(w, self.__n_constraints, axis=1), title=title, model=self.__data_model.benchmark_model.name)
+        else:
+            pass
 
     def experiment(self):
 
@@ -196,6 +215,7 @@ class CMAESAlgorithm:
             self.__results.append(cma_es)
             log.debug("Finished analyzing train dataset")
         self.time_delta = time.process_time() - start
+
 
         log.debug('Creating test X, Y')
         self.test_X, self.test_Y = self.__data_model.test_set()
@@ -246,27 +266,18 @@ class CMAESAlgorithm:
             
             for i, es in enumerate(self.__results):
 
-                W_start = list(self.split_w(es[8].x0, split_w=True))
-                W = list(self.split_w(es[0], split_w=True))
-                if self.__scaler is not None:
-                    # destandardize
-                    W_start[0] /= np.tile(self.__scaler.scale_, self.__n_constraints)
-                    W_start[1] += np.sum(np.split(W_start[0] * np.tile(self.__scaler.mean_, self.__n_constraints), self.__n_constraints), axis=1)
-                    W[0] /= np.tile(self.__scaler.scale_, self.__n_constraints)
-                    W[1] += np.sum(np.split(W[0] * np.tile(self.__scaler.mean_, self.__n_constraints), self.__n_constraints), axis=1)
+                W_start = self.split_w(es[8].x0, split_w=True)
+                W = self.split_w(es[0], split_w=True)
 
                 cluster = experiment.new_child_data_set('cluster_{}'.format(i))
                 cluster['w_start'] = to_str(W_start[0])
                 cluster['w0_start'] = to_str(W_start[1])
-                cluster["w_start_mathematica"] = self.to_mathematica(W_start)
                 cluster['w'] = to_str(W[0])
                 cluster['w0'] = to_str(W[1])
-                cluster['w_mathematica'] = self.to_mathematica(W)
                 cluster['f'] = es[1]
-            log.info("Trying to save.")
 
         except Exception as e:
-            experiment['error'] = str(e)
+            experiment['error'] = e
             log.error("Cannot process: {}".format(self.sql_params))
             print(e)
         finally:
@@ -278,12 +289,12 @@ class CMAESAlgorithm:
     @property
     def sql_params(self):
         return (self.__constraints_generator, self.__n_constraints, self.__margin, self.__sigma0, self.__data_model.benchmark_model.k,
-                 self.__data_model.benchmark_model.n, self.__seed,
+                 self.__data_model.benchmark_model.i, self.__seed,
                  self.__data_model.benchmark_model.name, self.__clustering, self.__scaler is not None)
 
 
-# algorithm = CMAESAlgorithm(constraints_generator=cg.f_2pn.__name__, sigma0=0.125, k=1,
-#                            scaler=True, margin=1.0, clustering_k_min=0, model_name='simplex', n=2, seed=0)
+# algorithm = CMAESAlgorithm(constraints_generator=cg.f_2n.__name__, sigma0=2, k=1,
+#                            scaler=True, margin=1.1, clustering_k_min=2, model_name='simplex', n=5, seed=0, draw=False)
 # algorithm.experiment()
 
 if __name__ == '__main__':

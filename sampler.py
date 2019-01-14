@@ -52,3 +52,4 @@ def bounding_sphere(n: int, train_data_set: np.array, dim: int, r=1, margin: flo
     x0 = sign(x0)
     x0 = x0 / scale_factor(train_data_set=train_data_set, margin=margin)
     return np.concatenate(x0).flatten()
+

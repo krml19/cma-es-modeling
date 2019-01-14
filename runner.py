@@ -72,7 +72,7 @@ class AlgorithmRunner:
                 filtered.append(algorithm)
             else:
                 existing = existing + 1
-        log.info("Number of exisiting experiments: {}/{}".format(existing, len(experiments)))
+        log.info("Number of existing experiments: {}/{}".format(existing, len(experiments)))
         return filtered
 
     def convert_to_sql_params(self, algorithm_params: dict):
@@ -115,24 +115,24 @@ class AlgorithmRunner:
 
     def experiments_1(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), models=['ball', 'simplex', 'cube']) -> list:
         return [self.data_source(scaler=scaler, seeds=seeds, K=K, N=N, constraints_generator=cg.f_2np2,
-                                 clustering_k_min=0, sigma0=1.0, margin=1.0, models=['ball', 'simplex', 'cube']) for scaler in [True, False]]
+                                 clustering_k_min=0, sigma0=1.0, margin=1.0, models=models) for scaler in [True, False]]
 
     def experiments_2(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), models=['ball', 'simplex', 'cube']) -> list:
         return [self.data_source(constraints_generator=constraints_generator, seeds=seeds, K=K, N=N, clustering_k_min=0,
-                                 sigma0=1.0, margin=1.0, models=['ball', 'simplex', 'cube']) for constraints_generator in [cg.f_2n, cg.f_2np2, cg.f_n3, cg.f_2pn]]
+                                 sigma0=1.0, margin=1.0, models=models) for constraints_generator in [cg.f_2n, cg.f_2np2, cg.f_n3, cg.f_2pn]]
 
     def experiments_3(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), models=['ball', 'simplex', 'cube']) -> list:
-        return [self.data_source(clustering_k_min=kmin, seeds=seeds, K=K, N=N, sigma0=1.0, margin=1.0, models=['ball', 'simplex', 'cube']) for kmin in [0, 1, 2]]
+        return [self.data_source(clustering_k_min=kmin, seeds=seeds, K=K, N=N, sigma0=1.0, margin=1.0, models=models) for kmin in [0, 1, 2]]
 
     def experiments_4(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), models=['ball', 'simplex', 'cube']) -> list:
-        return [self.data_source(sigma0=sigma, seeds=seeds, K=K, N=N, margin=1.0, models=['ball', 'simplex', 'cube']) for sigma in [0.125, 0.25, 0.5, 1, 2]]
+        return [self.data_source(sigma0=sigma, seeds=seeds, K=K, N=N, margin=1.0, models=models) for sigma in [0.125, 0.25, 0.5, 1, 2]]
 
     def experiments_5(self, seeds: range = range(0, 30), K: range=range(1,3), N: range = range(2, 8), models=['ball', 'simplex', 'cube']) -> list:
-        return [self.data_source(margin=margin, seeds=seeds, K=K, N=N, models=['ball', 'simplex', 'cube']) for margin in [0.9, 1, 1.1]]
+        return [self.data_source(margin=margin, seeds=seeds, K=K, N=N, models=models) for margin in [0.9, 1, 1.1]]
 
     def experiments_6(self, seeds: range = range(0, 30), N: range = range(2, 8),K=range(1, 3), models=['ball', 'simplex', 'cube']) -> list:
         return [
-            self.data_source(seeds=seeds, K=range(1, 3), N=N, train_sample=ts, models=['ball', 'simplex', 'cube']) for ts in [100, 200, 300, 400, 500]]
+            self.data_source(seeds=seeds, K=K, N=N, train_sample=ts, models=models) for ts in [100, 200, 300, 400, 500]]
 
     def benchmarks(self) -> list:
         return [self.data_source(benchmark_mode=True)]
@@ -158,7 +158,7 @@ class AlgorithmRunner:
             seq_of_params = [self.convert_to_sql_params(experiment) for experiment in experiments]
             db_experiments = [database.engine.execute(self.sql, params).fetchone()[0] for params in seq_of_params]
             filtered = list(filter(lambda t: t[0] > 0, zip(db_experiments, experiments)))
-            log.info("Number of exisiting experiments in experiment {}: {}/{}".format(i, len(filtered), len(experiments)))
+            log.info("Number of existing experiments in experiment {}: {}/{}".format(i, len(filtered), len(experiments)))
 
     def run_instance(self, inopts: dict):
         algorithm = CMAESAlgorithm(**inopts)
@@ -195,15 +195,15 @@ class AlgorithmRunner:
 
 if __name__ == '__main__':
     runner = AlgorithmRunner()
-    seeds = range(0, 15)
+    seeds = range(0, 1)
     experiments = flat([
-        runner.experiments_1(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
-        runner.experiments_2(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
-        runner.experiments_3(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
-        runner.experiments_4(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
-        runner.experiments_5(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
-        runner.experiments_6(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex'])
+        runner.experiments_1(seeds=seeds, N=range(2,3), K=range(1,2), models=['simplex']),
+        # runner.experiments_2(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
+        # runner.experiments_3(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
+        # runner.experiments_4(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
+        # runner.experiments_5(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex']),
+        # runner.experiments_6(seeds=seeds, N=range(7,8), K=range(2,3), models=['simplex'])
         ])
     # experiments = runner.experiments_1(seeds=seeds)
-    # runner.run(experiments)
-    runner.run_slurm(experiments)
+    runner.run(experiments)
+    # runner.run_slurm(experiments)
