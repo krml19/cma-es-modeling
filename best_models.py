@@ -60,17 +60,20 @@ if __name__ == '__main__':
         scaler = standard_scaler(params[0], 3, params[1], res[2]) if res[3] else None
         constraints = connection.execute(get_weights_sql, [res[0]] * 6).fetchall()
 
-        w0 = constraints[0][1].split(' ')
-        w0 = list(map(lambda x: float(x), w0))
+        text = ""
+        for constraint in constraints:
+            w0 = constraint[1].split(' ')
+            w0 = list(map(lambda x: float(x), w0))
 
-        w = constraints[0][0].split(' ')
-        w = list(map(lambda x: float(x), w))
-        w = np.array(w)
-        
-        constraints = [w, w0]
-        if scaler is not None:
-            constraints = destandardize(scaler, constraints, nc)
-        text = to_mathematica(constraints, nc)
+            w = constraint[0].split(' ')
+            w = list(map(lambda x: float(x), w))
+            w = np.array(w)
+
+            c = [w, w0]
+            if scaler is not None:
+                c = destandardize(scaler, c, nc)
+            text += "(%s) || \n" % to_mathematica(c, nc)
+        text = text[:-5]
         log.debug(f"Best model for: {model}:\n{text}")
         write_file(model, text, '.txt', Paths.best_models.value)
 
