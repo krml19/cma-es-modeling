@@ -34,7 +34,7 @@ class MeasureF1(Measure):
     name = 'F_1'
 
 class MeasureTime(Measure):
-    grouping_attribute = 'time'
+    grouping_attribute = 'time_mean'
     sem = 'time_sem'
     name = 'CPU Time'
 
@@ -90,7 +90,9 @@ class Aggragator:
 
     @staticmethod
     def f1_score(df: [pd.DataFrame, pd.Series]) -> pd.Series:
-        return 2 * df.tp / (2 * df.tp + df.fp + df.fn)
+        p = df.tp / (df.tp + df.fp)
+        r = df.tp / (df.tp + df.fn)
+        return 2.0 * p * r / (p + r)
 
     @staticmethod
     def mcc(df: [pd.DataFrame, pd.Series]) -> pd.Series:
@@ -168,8 +170,10 @@ class Aggragator:
         results = {
             'f_mean': (group['f'].mean() * -1),
             'f1_mean': (group['f1'].mean()),
+            'time_mean': (group['time'].mean()),
             'f_sem': (group['f'].sem(ddof=1) * stats.t.interval(alpha=0.95, df=group.shape[0])[1]), # / (group['f'].mean() * -1),
             'f1_sem': (group['f1'].sem(ddof=1) * stats.t.interval(alpha=0.95, df=group.shape[0])[1]),
+            'time_sem': (group['time'].sem(ddof=1) * stats.t.interval(alpha=0.95, df=group.shape[0])[1]),
             'tp_mean': group['tp'].mean(),
             'tn_mean': group['tn'].mean(),
             'fp_mean': group['fp'].mean(),

@@ -556,7 +556,7 @@ def save(experiment: Experiment, aggregator: Aggragator, data_frame: pd.DataFram
 
 def get_table_data(experiment: Experiment):
     aggregator = Aggragator(experiment=experiment.index, benchmark_mode=experiment.benchmark_mode,
-                            attribute=experiment.attribute)
+                            attribute=experiment.attribute, measures=experiment.measure)
 
     data_frame = aggregator.transform(split=experiment.split)
 
