@@ -65,7 +65,7 @@ class Aggragator:
 
         return df
 
-    def transform(self, split: [None, list] = None) -> pd.DataFrame:
+    def transform(self, split: [None, list] = None, rank_ascending=False) -> pd.DataFrame:
         db: pd.DataFrame = self.db()
         grouping_attributes = ['constraints_generator', 'clustering', 'margin', 'standardized', 'sigma', 'name', 'k',
                                'n', 'train_sample']
@@ -79,20 +79,21 @@ class Aggragator:
                                map(lambda x: "{} == {}".format(x[0], '\'%s\'' % x[1] if isinstance(x[1], str) else x[1]), zip(split, list(combination))))
                 chunk = db.query(query)
                 df2 = chunk.groupby(grouping_attributes).apply(self.__get_stats)
-                data_frame = self.select_features(df2, self.attribute)
+                data_frame = self.select_features(df2, self.attribute, rank_ascending=rank_ascending)
                 items.append((data_frame, combination))
             return items
         else:
             df2 = db.groupby(grouping_attributes).apply(self.__get_stats)
-            data_frames = [self.select_features(df2, self.attribute, measure=measure) for measure in self.measures]
+            data_frames = [self.select_features(df2, self.attribute, measure=measure, rank_ascending=rank_ascending) for measure in self.measures]
             self.update_info(db, df2)
             return pd.concat(data_frames, keys=map(lambda measure: measure.name, self.measures))
 
     @staticmethod
     def f1_score(df: [pd.DataFrame, pd.Series]) -> pd.Series:
-        p = df.tp / (df.tp + df.fp)
-        r = df.tp / (df.tp + df.fn)
-        return 2.0 * p * r / (p + r)
+        # print(df[["tp", "fp", "tn", "fn"]])
+        p = df.tp / (df.tp + df.fp + 1e-12)  # tp + fp = 0 -> p = 0
+        r = df.tp / (df.tp + df.fn + 1e-12)  # tp + fn = 0 -> r = 0
+        return 2.0 * p * r / (p + r + 1e-12)
 
     @staticmethod
     def mcc(df: [pd.DataFrame, pd.Series]) -> pd.Series:
@@ -194,13 +195,12 @@ class Aggragator:
         return pd.Series(results, name='metrics')
 
     def normalize(self, series: pd.Series):
-        scaler = QuantileTransformer()
         series = series.fillna(0)
-        scaler.fit(series)
-        values = scaler.transform(series.values)
-        for col in range(values.shape[0]):
-            for row in range(values.shape[1]):
-                series.iloc[col].iloc[row] = values[col][row]
+        scaler = QuantileTransformer()
+        scaler.fit(series.values.ravel().reshape(-1, 1))
+
+        for col in range(series.values.shape[1]):
+            series.values[:, col] = scaler.transform(series.values[:, col].reshape(-1, 1)).ravel()
 
         return series
 
@@ -215,12 +215,12 @@ class Aggragator:
         # series = series.applymap(lambda x: scaler.transform(x)[0][0])
         return series
 
-    def select_features(self, df2, ranking_attribute: str, measure: Measure = MeasureF):
+    def select_features(self, df2, ranking_attribute: str, measure: Measure = MeasureF, rank_ascending=False):
         data_frame: pd.DataFrame = df2.groupby(['model', ranking_attribute])[[measure.grouping_attribute, measure.sem]].mean().unstack()
         self.attribute_values = list(df2[self.attribute].unique())
 
         rank_keys = [('rank', key) for key in self.attribute_values]
-        data_frame[rank_keys] = data_frame[measure.grouping_attribute].rank(axis=1, ascending=False)
+        data_frame[rank_keys] = data_frame[measure.grouping_attribute].rank(axis=1, ascending=rank_ascending)
 
         rank_norm_keys = [('rank_norm', key) for key in self.attribute_values]
         data_frame[rank_norm_keys] = self.normalize(data_frame[measure.grouping_attribute])

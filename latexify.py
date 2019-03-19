@@ -304,8 +304,8 @@ class MultiTable:
         top = """
         \\begin{tabular}{cccccccccccccccccccccc}
 \cline{2-3} \cline{5-8} \cline{10-12} \cline{14-18} \cline{20-22} 
- & \multicolumn{2}{c}{(a) Standardization} &  & \multicolumn{4}{c}{(b) $n_{c}$ } &  & \multicolumn{3}{c}{(c) $(k_{min},k_{max})$} &  & \multicolumn{5}{c}{(d) $\sigma_{0}$} &  & \multicolumn{3}{c}{(e) $m$}\\tabularnewline
-Problem & Off & On &  & $2n$ & $2n^{2}$ & $2^{n}$ & $n^{3}$ &  & $(1,1)$ & $(1,\infty)$ & $(2,\infty)$ &  & $0.125$ & $0.25$ & $0.5$ & $1.0$ & $2.0$ &  & $0.9$ & $1.0$ & $1.1$\\tabularnewline
+ & \multicolumn{2}{c}{(a) Standardization} &  & \multicolumn{4}{c}{(b) $n_{c}$ } &  & \multicolumn{3}{c}{(c) $[k_{min},k_{max}]$} &  & \multicolumn{5}{c}{(d) $\sigma_{0}$} &  & \multicolumn{3}{c}{(e) $m$}\\tabularnewline
+Problem & Off & On &  & $2n$ & $2n^{2}$ & $2^{n}$ & $n^{3}$ &  & $[1,1]$ & $[1,\infty)$ & $[2,\infty)$ &  & $0.125$ & $0.25$ & $0.5$ & $1.0$ & $2.0$ &  & $0.9$ & $1.0$ & $1.1$\\tabularnewline
 \cline{1-3} \cline{5-8} \cline{10-12} \cline{14-18} \cline{20-22}
         """
         body = f'{body} \\\\'
@@ -558,7 +558,7 @@ def get_table_data(experiment: Experiment):
     aggregator = Aggragator(experiment=experiment.index, benchmark_mode=experiment.benchmark_mode,
                             attribute=experiment.attribute, measures=experiment.measure)
 
-    data_frame = aggregator.transform(split=experiment.split)
+    data_frame = aggregator.transform(split=experiment.split, rank_ascending=experiment.reverse_colors)
 
     data_table = experiment.table(data_frame, experiment.header, attribute=aggregator.attribute,
                                   attribute_values=aggregator.attribute_values, reverse_colors=experiment.reverse_colors)
