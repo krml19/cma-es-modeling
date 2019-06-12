@@ -154,7 +154,7 @@ class Database:
             self.engine.begin_transaction()
             self.__ensure_columns(set)
             insert = self.__build_insert_statement(set)
-            parameters = {col: None if value is float and math.isnan(value) else value for (col, value) in set.items()}
+            parameters = {col: None if isinstance(value, float) and math.isnan(value) else value for (col, value) in set.items()}
             self.engine.execute(insert, parameters)
             last_insert_id = self.engine.last_insert_id
             self.engine.commit()

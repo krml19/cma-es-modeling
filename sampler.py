@@ -1,11 +1,11 @@
 import numpy as np
 import itertools
 import random
+import math
 
 
-def samples(bounds: list, rows: int, seed: [int, None] = None):
-    if seed is not None:
-        np.random.seed(seed=seed)
+def samples(bounds: list, rows: int, seed: int):
+    np.random.seed(seed=seed)
     return np.vstack(
         [np.random.uniform(low=low, high=high, size=rows) for low, high in bounds]).T
 
@@ -32,22 +32,30 @@ def cartesian(n: int, dim: int, r: float=1):
 
     _n = min_pow(dim, 2, n)
     _n = _n if dim > 2 else _n * 2
-    phis = np.arange(_n) / _n * 2 * np.pi
+    phis = (np.arange(_n) + 0.5) / _n * 2 * np.pi
 
     phis = [np.array(i) for i in itertools.product(phis, repeat=int(dim - 1))]
-    random.shuffle(phis)
-    phis = itertools.islice(phis, 0, int(n))
-
     coordinates = [ct(phi, r=r) for phi in phis]
-    return coordinates
 
+    unique_coordinates = np.unique(coordinates, axis=0)
+    np.random.shuffle(unique_coordinates)
 
-def scale_factor(train_data_set: np.array, margin: float):
-    return np.amax(train_data_set, axis=0) * margin
+    if unique_coordinates.shape[0] > n:
+        unique_coordinates = unique_coordinates[0:n, :]
+    while unique_coordinates.shape[0] < n:
+        unique_coordinates = np.vstack((unique_coordinates, unique_coordinates[0:n-unique_coordinates.shape[0], :]))
+
+    return unique_coordinates
+
 
 
 def bounding_sphere(n: int, train_data_set: np.array, dim: int, r=1, margin: float=2.0):
-    x0 = cartesian(n, r=r, dim=dim)
-    x0 = x0 / scale_factor(train_data_set=train_data_set, margin=margin)
-    return np.concatenate(x0).flatten()
+    # sign = np.vectorize(lambda x: 1 if x >= 0 else -1)
+    W = np.array(cartesian(n, r=r, dim=dim))  # matrix of constraint * weights in constraints
+    XW = np.matmul(train_data_set, W.T)  # matrix of example * constraint (example in row, constraint rhs in column)
+    a = np.amax(XW, axis=0)  # vector of maximal rhs per constraint
+    Wnorm = W / np.tile(a, (dim, 1)).T  # normalize constraints such that rhs=1
+    Wnorm /= margin  # expand/shrink margin, rhs=1/margin
+    assert np.all(np.matmul(train_data_set, Wnorm.T) <= 1.0/margin + 1e-6)
+    return Wnorm.flatten()
 

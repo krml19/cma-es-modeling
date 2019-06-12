@@ -1,0 +1,12 @@
+cma
+matplotlib
+numpy
+pyclustering
+frozendict
+psutil
+sklearn
+pandas
+scipy
+requests
+sortedcontainers
+image
