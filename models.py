@@ -227,16 +227,3 @@ class DataModel:
     def valid_set2(self) -> np.ndarray:
         valid = self.benchmark_model.dataset(seed=self.seed + 10000)
         return valid.astype(float)
-
-
-class CaseStudyModel(BenchmarkModel):
-
-    def __init__(self, d=2.7, B=list([1, 1])):
-        header = pd.read_csv('./data/Rice-nonoise2.csv', delimiter=';', nrows=0)
-        header.drop(['Type'], inplace=True, axis=1)
-        n = len(header.keys())
-        self.header = header
-        super().__init__(n=n, d=d, name='case_study', B=B)
-
-        self.bounds = [(float(re.sub(r'.*\|(.*)\|.*', r'\1', key)), float(re.sub(r'.*\|(.*)\].*', r'\1', key))) for key in
-                       header.keys()]
